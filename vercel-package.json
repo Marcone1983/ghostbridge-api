@@ -1,0 +1,18 @@
+{
+  "name": "ghostbridge-api",
+  "version": "1.0.0",
+  "description": "GhostBridge Ultra-Secure API for Vercel",
+  "main": "vercel-single-file.js",
+  "scripts": {
+    "start": "node vercel-single-file.js",
+    "dev": "node vercel-single-file.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
