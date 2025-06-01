@@ -1,84 +1,86 @@
-export const config = {
-    runtime: 'edge',
+import { initializeApp } from 'firebase/app';
+  import { getDatabase, ref, get, remove } from
+  'firebase/database';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDayyQudSQnU-dRev_OhD2BtArb3PFSup0",
+    authDomain: "ghostbridge-6aa02.firebaseapp.com",
+    databaseURL: "https://ghostbridge-6aa02-default-rt
+  db.europe-west1.firebasedatabase.app",
+    projectId: "ghostbridge-6aa02",
+    storageBucket:
+  "ghostbridge-6aa02.firebasestorage.app",
+    messagingSenderId: "723378264651",
+    appId: "1:723378264651:web:1dfbf74dbf27a69703cbce"
   };
 
-  // GhostBridge API - Read Secure Message
-  export default async function handler(req) {
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
+
+  export default async function handler(req, res) {
     // CORS headers
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Content-Type': 'application/json',
-    };
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods',
+  'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers',
+  'Content-Type');
 
     if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 200, headers
-   });
+      return res.status(200).end();
     }
 
     if (req.method !== 'POST') {
-      return new Response(JSON.stringify({
+      return res.status(405).json({
         error: 'Method not allowed',
         allowed: ['POST']
-      }), { status: 405, headers });
+      });
     }
 
     try {
-      const body = await req.json();
-      const { code } = body;
+      const { code } = req.body;
 
       if (!code) {
-        return new Response(JSON.stringify({
+        return res.status(400).json({
           error: 'Missing required field: code'
-        }), { status: 400, headers });
+        });
       }
 
       const upperCode = code.toUpperCase();
 
-      // Mock messages for testing
-      const mockMessages = {
-        'GHOSTI07P': {
-          message: 'Hello from GhostBridge! This is a
-  test message with military-grade encryption.',
-          timestamp: new Date().toISOString(),
-          publicKey: 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcD
-  QgAERBh/aTTkZfGZCFL73Yj3AuUwQVqHRXj76lCJP7AnNE9L6hXG
-  ltCA6jBSrPWcNp66i7wX1zW9LYFqTZxSPN1eeg==',
-          keyId: 'key_1748810173719',
-          encrypted: true,
-          burned: false
-        }
-      };
-
-      const messageData = mockMessages[upperCode];
+      // Leggi da Firebase Realtime Database
+      const snapshot = await get(ref(database,
+  `messages/${upperCode}`));
+      const messageData = snapshot.val();
 
       if (!messageData) {
-        return new Response(JSON.stringify({
+        return res.status(404).json({
           error: 'Message not found',
           message: 'Ghost Code not found or message
   has expired',
           code: upperCode
-        }), { status: 404, headers });
+        });
       }
 
       if (messageData.burned) {
-        return new Response(JSON.stringify({
+        return res.status(410).json({
           error: 'Message burned',
           message: 'This message has been permanently
   destroyed'
-        }), { status: 410, headers });
+        });
       }
 
-      console.log('📬 Message retrieved:', {
+      // Cancella il messaggio da Firebase (burn after
+   reading)
+      await remove(ref(database,
+  `messages/${upperCode}`));
+
+      console.log('📬 Message retrieved and burned
+  from Firebase:', {
         code: upperCode,
         timestamp: messageData.timestamp
       });
 
-      // Mark as burned
-      messageData.burned = true;
-
-      return new Response(JSON.stringify({
+      res.status(200).json({
         success: true,
         message: messageData.message,
         data: {
@@ -94,13 +96,14 @@ export const config = {
           forwardSecrecy: true,
           burned: true
         }
-      }), { status: 200, headers });
+      });
 
     } catch (error) {
-      console.error('❌ Read error:', error);
-      return new Response(JSON.stringify({
+      console.error('❌ Firebase read error:', error);
+      res.status(500).json({
         error: 'Internal server error',
-        message: 'Failed to retrieve message'
-      }), { status: 500, headers });
+        message: 'Failed to retrieve message from
+  Firebase'
+      });
     }
 }
