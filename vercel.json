@@ -11,8 +11,5 @@
         "src": "/(.*)",
         "dest": "/vercel-single-file.js"
       }
-    ],
-    "env": {
-      "NODE_ENV": "production"
-    }
+    ]
 }
