@@ -7,9 +7,10 @@
       "start": "vercel dev"
     },
     "dependencies": {
-      "firebase": "^10.7.1"
+      "firebase": "^10.7.1",
+      "dotenv": "^16.0.3"
     },
     "engines": {
       "node": ">=18.0.0"
     }
-  }
+}
