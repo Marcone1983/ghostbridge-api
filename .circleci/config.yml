@@ -1,0 +1,51 @@
+version: 2.1
+
+orbs:
+  android: circleci/android@2.3.0
+  node: circleci/node@5.1.0
+
+jobs:
+  build-android:
+    executor:
+      name: android/android-docker
+      tag: "2024.01.1"
+    resource_class: large
+    steps:
+      - checkout
+      - node/install:
+          node-version: "18.17.0"
+      - node/install-packages:
+          pkg-manager: npm
+          cache-version: v2
+      - run:
+          name: Create Release Keystore
+          command: |
+            cd android/app
+            if [ ! -f "ghostbridge-release-key.jks" ]; then
+              keytool -genkey -v -keystore ghostbridge-release-key.jks \
+                -alias ghostbridge-key -keyalg RSA -keysize 2048 -validity 10000 \
+                -storepass ghostbridge2024 -keypass ghostbridge2024 \
+                -dname "CN=GhostBridge, OU=Security, O=GhostBridge, L=Unknown, S=Unknown, C=US"
+            fi
+      - android/restore-gradle-cache
+      - run:
+          name: Build Android APK
+          command: |
+            cd android
+            ./gradlew assembleDebug --no-daemon --max-workers=2
+          environment:
+            GRADLE_OPTS: '-Xmx3g -XX:MaxMetaspaceSize=512m'
+            GHOSTBRIDGE_STORE_PASSWORD: ghostbridge2024
+            GHOSTBRIDGE_KEY_PASSWORD: ghostbridge2024
+      - android/save-gradle-cache
+      - store_artifacts:
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          destination: ghostbridge-debug.apk
+      - store_artifacts:
+          path: android/app/build/outputs/apk/
+          destination: apk-outputs
+
+workflows:
+  build-and-test:
+    jobs:
+      - build-android
