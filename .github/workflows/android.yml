@@ -58,7 +58,7 @@ jobs:
         chmod +x gradlew
         # Aumenta memoria JVM per evitare OutOfMemory
         export GRADLE_OPTS="-Xmx4g -XX:MaxMetaspaceSize=512m"
-        ./gradlew assembleRelease --no-daemon --max-workers=2
+        ./gradlew assembleDebug --no-daemon --max-workers=2
       env:
         GHOSTBRIDGE_STORE_PASSWORD: ghostbridge2024
         GHOSTBRIDGE_KEY_PASSWORD: ghostbridge2024
@@ -67,5 +67,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ghostbridge-apk
-        path: android/app/build/outputs/apk/release/app-release.apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 30
