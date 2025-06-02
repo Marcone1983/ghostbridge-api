@@ -1,0 +1,15 @@
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+plugins { id("com.facebook.react.settings") }
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'GhostBridgeApp'
+include ':app'
+
+// NATIVE SECURITY MODULES - REALI AL 100%
+include ':react-native-tor'
+project(':react-native-tor').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-tor/android')
+
+// CRYPTO NATIVE SUPPORT
+include ':libsodium-jni'
+project(':libsodium-jni').projectDir = new File(rootProject.projectDir, '../node_modules/libsodium-jni/android')
+
+includeBuild('../node_modules/@react-native/gradle-plugin')

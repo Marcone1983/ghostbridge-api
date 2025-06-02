@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="80"
+    android:viewportHeight="80">
+    
+    <!-- Ghost Body -->
+    <path
+        android:fillColor="#00ff88"
+        android:pathData="M40,15 
+                        C50,15 60,25 60,35
+                        L60,55
+                        C60,60 55,60 50,55
+                        C45,60 35,60 30,55
+                        C25,60 20,60 20,55
+                        L20,35
+                        C20,25 30,15 40,15 Z" />
+    
+    <!-- Ghost Eyes -->
+    <circle
+        android:fillColor="#0a0a0a"
+        android:cx="32"
+        android:cy="32"
+        android:r="4" />
+    
+    <circle
+        android:fillColor="#0a0a0a"
+        android:cx="48"
+        android:cy="32"
+        android:r="4" />
+    
+    <!-- Ghost Mouth -->
+    <ellipse
+        android:fillColor="#0a0a0a"
+        android:cx="40"
+        android:cy="42"
+        android:rx="3"
+        android:ry="2" />
+        
+    <!-- Glowing effect -->
+    <path
+        android:fillColor="#00ff8844"
+        android:pathData="M40,12 
+                        C52,12 63,23 63,37
+                        L63,58
+                        C63,63 58,63 53,58
+                        C48,63 32,63 27,58
+                        C22,63 17,63 17,58
+                        L17,37
+                        C17,23 28,12 40,12 Z" />
+</vector>

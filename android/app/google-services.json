@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "723378264651",
+    "project_id": "ghostbridge-6aa02",
+    "storage_bucket": "ghostbridge-6aa02.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:723378264651:android:1dfbf74dbf27a69703cbce",
+        "android_client_info": {
+          "package_name": "com.ghostbridgeapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "723378264651-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDayyQudSQnU-dRev_OhD2BtArb3PFSup0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "723378264651-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
