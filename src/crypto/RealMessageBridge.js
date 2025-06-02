@@ -344,6 +344,49 @@ class RealMessageBridge {
   }
 
   /**
+   * Get next consecutive ID using Firebase transaction
+   */
+  async getNextConsecutiveID() {
+    await this.ensureInitialized();
+    
+    try {
+      console.log('🔢 Getting next consecutive ID...');
+      
+      // Use Firebase transaction to ensure atomic increment
+      const counterRef = database().ref('/ghostBridgeIDCounter');
+      
+      const result = await counterRef.transaction((currentValue) => {
+        // If counter doesn't exist, start at 1
+        if (currentValue === null) {
+          return 1;
+        }
+        
+        // Increment counter
+        return currentValue + 1;
+      });
+      
+      if (result.committed) {
+        const newID = result.snapshot.val();
+        console.log('✅ Assigned consecutive ID:', newID);
+        
+        return {
+          success: true,
+          id: newID
+        };
+      } else {
+        throw new Error('Transaction not committed');
+      }
+      
+    } catch (error) {
+      console.error('Get consecutive ID error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Emergency burn all bridges
    */
   async emergencyBurnAll() {

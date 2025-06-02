@@ -16,14 +16,25 @@ import {
   NativeModules,
   AppState,
   Platform,
+  Share,
+  Linking,
+  PermissionsAndroid,
 } from 'react-native';
 import GhostCrypto from './src/crypto/GhostCrypto';
 import RealMessageBridge from './src/crypto/RealMessageBridge';
+import RealSteganography from './src/crypto/RealSteganography';
 import RealGeolocationSpoofer from './src/security/RealGeolocationSpoofer';
 import AdvancedProxyChains from './src/network/AdvancedProxyChains';
+import RealFederatedLearning from './src/ml/RealFederatedLearning';
+import CompressionAwareSteganography from './src/crypto/CompressionAwareSteganography';
+import HardwareTEEManager from './src/security/HardwareTEEManager';
+import NANDAwareSecureDeletion from './src/security/NANDAwareSecureDeletion';
 import JailMonkey from 'jail-monkey';
 import DeviceInfo from 'react-native-device-info';
 import Toast from 'react-native-toast-message';
+import RNFS from 'react-native-fs';
+import {launchImageLibrary} from 'react-native-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 const { SecurityModule } = NativeModules;
@@ -33,12 +44,21 @@ const GhostBridgeApp = () => {
   const [activeSection, setActiveSection] = useState('home');
   const [senderGhostCode, setSenderGhostCode] = useState(null);
   const [receiveGhostCode, setReceiveGhostCode] = useState('');
-  const [recipientCode, setRecipientCode] = useState('');
+  const [recipientID, setRecipientID] = useState(''); // Changed to recipient ID
   const [recipientPublicKey, setRecipientPublicKey] = useState('');
   const [messageText, setMessageText] = useState('');
   const [displayMessage, setDisplayMessage] = useState('Waiting for secure messages...');
   const [sendStatus, setSendStatus] = useState('');
   const [receiveStatus, setReceiveStatus] = useState('');
+  
+  // Steganography state
+  const [steganographyEnabled, setSteganographyEnabled] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [steganographyPassword, setSteganographyPassword] = useState('');
+  const [receivedImage, setReceivedImage] = useState(null);
+  const [lastSentImage, setLastSentImage] = useState(null); // Store last sent stego image
+  const [selectedDecryptImage, setSelectedDecryptImage] = useState(null); // Image selected for decryption
+  const [imageMessageMode, setImageMessageMode] = useState('auto'); // 'auto', 'image', 'text'
   
   // Security state
   const [isSecurityInitialized, setIsSecurityInitialized] = useState(false);
@@ -48,6 +68,9 @@ const GhostBridgeApp = () => {
   const [senderKeyPair, setSenderKeyPair] = useState(null);
   const appState = useRef(AppState.currentState);
   
+  // Generate unique consecutive GhostBridge ID
+  const [ghostBridgeID, setGhostBridgeID] = useState('000');
+
   const [deviceId] = useState(() => {
     return DeviceInfo.getUniqueId().substring(0, 8).toUpperCase();
   });
@@ -66,8 +89,56 @@ const GhostBridgeApp = () => {
     return chars;
   });
 
+  // Get unique consecutive ID from Firebase
+  const getUniqueConsecutiveID = async () => {
+    try {
+      console.log('🔢 Getting unique consecutive ID...');
+      
+      // Check if ID is already stored locally
+      const storedID = await AsyncStorage.getItem('ghostBridgeID');
+      if (storedID) {
+        setGhostBridgeID(storedID);
+        console.log('✅ Using stored ID:', storedID);
+        return;
+      }
+      
+      // Initialize Firebase if not already done
+      await RealMessageBridge.initialize();
+      
+      // Use Firebase transaction to get next consecutive ID
+      const result = await RealMessageBridge.getNextConsecutiveID();
+      
+      if (result.success) {
+        const newID = result.id.toString().padStart(3, '0');
+        setGhostBridgeID(newID);
+        
+        // Store ID locally so it never changes
+        await AsyncStorage.setItem('ghostBridgeID', newID);
+        
+        console.log('✅ Assigned new consecutive ID:', newID);
+        showToast('success', `Il tuo ID GhostBridge: ${newID}`);
+      } else {
+        throw new Error('Failed to get consecutive ID');
+      }
+      
+    } catch (error) {
+      console.error('Failed to get unique ID:', error);
+      showToast('error', 'Errore assegnazione ID');
+      
+      // Fallback to device-based ID for now
+      const deviceHash = DeviceInfo.getUniqueId();
+      let hash = 0;
+      for (let i = 0; i < deviceHash.length; i++) {
+        hash = ((hash << 5) - hash + deviceHash.charCodeAt(i)) & 0xffffffff;
+      }
+      const fallbackID = (Math.abs(hash % 999) + 1).toString().padStart(3, '0');
+      setGhostBridgeID(fallbackID);
+    }
+  };
+
   // Initialize security on app start
   useEffect(() => {
+    getUniqueConsecutiveID(); // Get ID first
     initializeSecurity();
     setupAppStateListener();
     
@@ -93,7 +164,19 @@ const GhostBridgeApp = () => {
 
   const initializeSecurity = async () => {
     try {
-      showToast('info', 'Initializing 30+ security layers...');
+      showToast('info', 'Initializing 35+ MILITARY-GRADE security layers...');
+      
+      // 🔐 Initialize Hardware TEE Manager (NEW!)
+      await HardwareTEEManager.initialize();
+      console.log('✅ Hardware TEE Manager initialized');
+      
+      // 💾 Initialize NAND-Aware Secure Deletion (NEW!)
+      await NANDAwareSecureDeletion.initialize();
+      console.log('✅ NAND-Aware Secure Deletion initialized');
+      
+      // 🧠 Initialize Federated Learning (NEW!)
+      await RealFederatedLearning.initialize();
+      console.log('✅ Federated Learning initialized');
       
       // Enable screen recording prevention
       if (SecurityModule) {
@@ -243,8 +326,15 @@ const GhostBridgeApp = () => {
   };
 
   const sendMessage = async () => {
-    if (!recipientCode.trim() || !messageText.trim()) {
-      setSendStatus('error|Fill all fields');
+    if (!recipientID.trim() || !messageText.trim()) {
+      setSendStatus('error|Inserisci ID destinatario e messaggio');
+      setTimeout(() => setSendStatus(''), 3000);
+      return;
+    }
+
+    // Validate recipient ID format (3 digits)
+    if (!/^\d{3}$/.test(recipientID)) {
+      setSendStatus('error|ID deve essere 3 cifre (es: 001, 002)');
       setTimeout(() => setSendStatus(''), 3000);
       return;
     }
@@ -271,7 +361,7 @@ const GhostBridgeApp = () => {
       // Perform intrusion detection
       const intrusionCheck = GhostCrypto.detectIntrusion({
         message: messageText,
-        recipientCode: recipientCode
+        recipientID: recipientID
       });
       
       if (intrusionCheck.intrusionDetected) {
@@ -303,7 +393,7 @@ const GhostBridgeApp = () => {
       // Add traffic padding and jitter
       const paddedData = GhostCrypto.addTrafficPadding({
         message: encrypted,
-        recipientCode: recipientCode,
+        recipientID: recipientID,
         senderCode: senderGhostCode,
         senderPublicKey: senderKeyPair.publicKey,
         pfsSession: pfsSession,
@@ -313,6 +403,42 @@ const GhostBridgeApp = () => {
       
       // Create onion routing layers
       const onionData = GhostCrypto.createOnionRoute(JSON.stringify(paddedData), 5);
+      
+      // Apply steganography if enabled
+      let finalPayload = onionData;
+      let messageType = 'text';
+      
+      if (steganographyEnabled && imageMessageMode !== 'text') {
+        try {
+          setSendStatus('info|Hiding message in image using LSB steganography...');
+          
+          // Get or generate cover image
+          const coverImagePath = selectedImage || await generateDefaultCoverImage();
+          
+          // Hide encrypted message in image
+          const steganographicImage = await RealSteganography.hideMessage(
+            coverImagePath,
+            onionData,
+            steganographyPassword || 'GhostBridge-' + Date.now(),
+            null // Let it generate output path
+          );
+          
+          finalPayload = steganographicImage.imagePath;
+          messageType = 'image';
+          
+          // Store the image path for sharing
+          setLastSentImage(steganographicImage.imagePath);
+          
+          showToast('success', 'Message hidden in image with LSB steganography');
+          console.log('🖼️ Message hidden in image:', steganographicImage.stats);
+          
+        } catch (stegError) {
+          console.warn('Steganography failed:', stegError.message);
+          showToast('error', 'Crittaggio immagine non riuscito');
+          setSendStatus('error|Crittaggio immagine fallito');
+          return; // Stop sending instead of fallback
+        }
+      }
       
       // Check honeypot
       if (GhostCrypto.checkHoneypotAccess('/api/bridge/create')) {
@@ -326,14 +452,17 @@ const GhostBridgeApp = () => {
       
       // Use REAL Firebase Realtime Database 
       const result = await RealMessageBridge.sendMessage(
-        recipientCode,
-        onionData,
+        recipientID, // Now using recipient ID instead of code
+        finalPayload,
         {
           senderCode: senderGhostCode,
           senderPublicKey: senderKeyPair.publicKey,
+          senderID: ghostBridgeID, // Add sender ID
           deviceId: deviceId,
           canary: GhostCrypto.generateCanaryToken().value,
-          sessionId: pfsSession.sessionId
+          sessionId: pfsSession.sessionId,
+          messageType: messageType, // 'text' or 'image'
+          steganographyEnabled: steganographyEnabled && messageType === 'image'
         }
       );
       
@@ -341,7 +470,7 @@ const GhostBridgeApp = () => {
         setSendStatus('success|Message sent with 30+ security layers!');
         showToast('success', 'Ultra-secure transmission complete');
         setMessageText('');
-        setRecipientCode('');
+        setRecipientID('');
         setRecipientPublicKey('');
         
         // Ratchet forward for next message
@@ -368,9 +497,79 @@ const GhostBridgeApp = () => {
     setTimeout(() => setSendStatus(''), 3000);
   };
 
+  // Decrypt message directly from selected image
+  const decryptFromSelectedImage = async () => {
+    try {
+      setReceiveStatus('info|Estraendo messaggio dall\'immagine...');
+      showToast('info', 'Estraendo LSB steganografia...');
+      
+      // Copy image to local temp directory first
+      const tempImagePath = `${RNFS.TemporaryDirectoryPath}/decrypt_${Date.now()}.jpg`;
+      await RNFS.copyFile(selectedDecryptImage, tempImagePath);
+      
+      // Extract message from steganographic image
+      const stegPassword = steganographyPassword || 'GhostBridge-' + Date.now();
+      const extractionResult = await RealSteganography.extractMessage(
+        tempImagePath,
+        stegPassword
+      );
+      
+      if (extractionResult.success) {
+        // The extracted message should be the onion-encrypted data
+        let decrypted = extractionResult.message;
+        
+        // Parse the extracted data
+        const parsedData = JSON.parse(decrypted);
+        
+        // Generate receiver key pair for decryption
+        const receiverKeyPair = await GhostCrypto.generateKeyPair();
+        
+        // Decrypt the actual message
+        const message = await GhostCrypto.decryptMessage(
+          parsedData.message,
+          receiverKeyPair.keyId,
+          parsedData.senderPublicKey
+        );
+        
+        setDisplayMessage(message);
+        setReceivedImage(tempImagePath); // Show the steganographic image
+        setReceiveStatus('success|Messaggio estratto dall\'immagine!');
+        showToast('success', 'Messaggio estratto con successo');
+        
+        // Clear selected image
+        setSelectedDecryptImage(null);
+        
+        // Auto-burn after reading
+        setTimeout(() => {
+          setDisplayMessage('💀 Messaggio bruciato dopo lettura');
+          setReceivedImage(null);
+          GhostCrypto.destroyKey(receiverKeyPair.keyId);
+          showToast('info', 'Messaggio auto-distrutto');
+        }, 30000);
+        
+      } else {
+        throw new Error('Impossibile estrarre messaggio dall\'immagine');
+      }
+      
+    } catch (error) {
+      setReceiveStatus('error|Estrazione fallita: ' + error.message);
+      showToast('error', 'Estrazione immagine fallita');
+      console.error('Image decryption error:', error);
+    }
+    
+    setTimeout(() => setReceiveStatus(''), 3000);
+  };
+
   const retrieveMessage = async () => {
+    // Check if we're decrypting from selected image or using Ghost Code
+    if (selectedDecryptImage) {
+      // Decrypt directly from selected image
+      await decryptFromSelectedImage();
+      return;
+    }
+    
     if (!receiveGhostCode.trim()) {
-      setReceiveStatus('error|Enter a valid Ghost Code');
+      setReceiveStatus('error|Inserisci un Ghost Code valido');
       setTimeout(() => setReceiveStatus(''), 3000);
       return;
     }
@@ -400,8 +599,40 @@ const GhostBridgeApp = () => {
         setReceiveStatus('info|Decrypting 30+ security layers...');
         showToast('info', 'Peeling onion layers...');
         
-        // Peel onion layers
         let decrypted = result.encryptedData;
+        let messageType = result.metadata?.messageType || 'text';
+        
+        // Handle steganography extraction for image messages
+        if (messageType === 'image' && result.metadata?.steganographyEnabled) {
+          try {
+            setReceiveStatus('info|Extracting hidden message from image...');
+            showToast('info', 'Extracting LSB steganography...');
+            
+            // Extract message from steganographic image
+            const stegPassword = steganographyPassword || 'GhostBridge-' + Date.now();
+            const extractionResult = await RealSteganography.extractMessage(
+              result.encryptedData, // This is the image path
+              stegPassword
+            );
+            
+            if (extractionResult.success) {
+              decrypted = extractionResult.message;
+              setReceivedImage(result.encryptedData); // Store image for display
+              showToast('success', 'Message extracted from image successfully');
+              console.log('🖼️ Message extracted from steganographic image');
+            } else {
+              throw new Error('Failed to extract message from image');
+            }
+            
+          } catch (stegError) {
+            console.warn('Steganography extraction failed:', stegError.message);
+            showToast('error', 'Estrazione immagine non riuscita');
+            setReceiveStatus('error|Estrazione immagine fallita');
+            return; // Stop processing instead of fallback
+          }
+        }
+        
+        // Peel onion layers
         if (result.metadata && result.metadata.route) {
           for (const layer of result.metadata.route) {
             decrypted = GhostCrypto.peelOnionLayer(decrypted, layer);
@@ -437,6 +668,7 @@ const GhostBridgeApp = () => {
         // Auto-burn after reading
         setTimeout(() => {
           setDisplayMessage('💀 Message burned after reading');
+          setReceivedImage(null); // Clear received image
           GhostCrypto.destroyKey(receiverKeyPair.keyId);
           showToast('info', 'Message auto-destroyed');
         }, 30000); // 30 seconds
@@ -451,7 +683,94 @@ const GhostBridgeApp = () => {
     setTimeout(() => setReceiveStatus(''), 3000);
   };
 
+
   // Receive Message (old function kept for compatibility)
+  // Share steganographic image to WhatsApp/Telegram
+  const shareStegImage = async (imagePath) => {
+    try {
+      const result = await Share.share({
+        url: `file://${imagePath}`,
+        message: 'Foto condivisa tramite GhostBridge 👻',
+      });
+      
+      if (result.action === Share.sharedAction) {
+        showToast('success', 'Immagine condivisa con sicurezza totale!');
+        console.log('🔗 Steganographic image shared securely');
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+      showToast('error', 'Condivisione fallita');
+    }
+  };
+
+  // Select image from gallery for decryption
+  const selectImageForDecryption = () => {
+    const options = {
+      title: 'Seleziona immagine da decriptare',
+      storageOptions: {
+        skipBackup: true,
+        path: 'images',
+      },
+      mediaType: 'photo',
+      includeBase64: false,
+      maxWidth: 2048,
+      maxHeight: 2048,
+      quality: 1.0,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        showToast('info', 'Selezione immagine annullata');
+      } else if (response.errorMessage) {
+        showToast('error', 'Errore selezione immagine: ' + response.errorMessage);
+      } else if (response.assets && response.assets[0]) {
+        const imageUri = response.assets[0].uri;
+        setSelectedDecryptImage(imageUri);
+        showToast('success', 'Immagine selezionata per decrittazione');
+        console.log('📷 Image selected for decryption:', imageUri);
+      }
+    });
+  };
+
+  // Open WhatsApp directly with image
+  const shareToWhatsApp = async (imagePath) => {
+    try {
+      const whatsappURL = `whatsapp://send?text=Foto GhostBridge 👻`;
+      const canOpen = await Linking.canOpenURL(whatsappURL);
+      
+      if (canOpen) {
+        await Linking.openURL(whatsappURL);
+        // Then user manually attaches the image
+        showToast('info', 'WhatsApp aperto - allega manualmente l\'immagine');
+      } else {
+        showToast('error', 'WhatsApp non installato');
+      }
+    } catch (error) {
+      console.error('WhatsApp open failed:', error);
+      showToast('error', 'Apertura WhatsApp fallita');
+    }
+  };
+
+
+  // Generate default cover image for steganography
+  const generateDefaultCoverImage = async () => {
+    try {
+      const outputPath = `${RNFS.TemporaryDirectoryPath}/ghost_cover_${Date.now()}.bmp`;
+      
+      // Generate cover image using RealSteganography
+      const coverImage = await RealSteganography.generateCoverImage(512, 512, outputPath);
+      
+      console.log('🖼️ Generated default cover image:', coverImage.path);
+      return coverImage.path;
+      
+    } catch (error) {
+      console.error('Failed to generate cover image:', error);
+      
+      // Fallback: return null and use text mode
+      return null;
+    }
+  };
+
   const receiveMessage = () => {
     retrieveMessage();
   };
@@ -553,8 +872,7 @@ const GhostBridgeApp = () => {
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.subtitle}>Military-Grade Anonymous Messaging</Text>
-            <Text style={styles.deviceId}>Device: {deviceId}</Text>
+            <Text style={styles.subtitle}>👻 ID: {ghostBridgeID} | Military-Grade Anonymous Messaging</Text>
             
             <View style={styles.navButtons}>
               <TouchableOpacity 
@@ -591,9 +909,11 @@ const GhostBridgeApp = () => {
                 <Text style={styles.sectionTitle}>30+ Active Security Features</Text>
                 
                 <Text style={styles.introText}>
-                  GhostBridge implements military-grade encryption with over 30 real security 
-                  layers. Every feature listed below is actively protecting your communications
-                  in real-time. No marketing fluff - just pure security.
+                  GhostBridge implementa crittografia di livello militare con oltre 30 strati di sicurezza reali. 
+                  Ogni funzione elencata qui sotto protegge attivamente le tue comunicazioni in tempo reale.
+                  
+                  🆔 Il tuo ID GhostBridge è il tuo numero identificativo fisso.
+                  🔐 Ogni messaggio usa un Ghost Code casuale diverso per sicurezza massima.
                 </Text>
 
                 {renderSecurityCategory('🔐', 'Ultra-Advanced Encryption:', [
@@ -608,7 +928,7 @@ const GhostBridgeApp = () => {
                 {renderSecurityCategory('🛡️', 'Anti-Interception:', [
                   '✅ Ephemeral Keys with auto-destruction',
                   '✅ Onion Routing (5 layers)',
-                  '✅ Steganography with LSB embedding',
+                  '✅ REAL LSB Steganography (hide in images)',
                   '✅ Traffic Analysis Protection with padding'
                 ])}
 
@@ -703,16 +1023,52 @@ const GhostBridgeApp = () => {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Send Ultra-Secure Message</Text>
                 
+                {/* Steganography Controls */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Recipient Ghost Code</Text>
+                  <Text style={styles.inputLabel}>🖼️ Steganography Mode</Text>
+                  <View style={styles.steganographyControls}>
+                    <TouchableOpacity 
+                      style={[styles.modeButton, steganographyEnabled && styles.modeButtonActive]}
+                      onPress={() => setSteganographyEnabled(!steganographyEnabled)}
+                    >
+                      <Text style={[styles.modeButtonText, steganographyEnabled && styles.modeButtonTextActive]}>
+                        {steganographyEnabled ? '🖼️ Image Mode' : '📝 Text Mode'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {steganographyEnabled && (
+                    <View style={styles.steganographyOptions}>
+                      <Text style={styles.optionLabel}>Steganography Password (optional):</Text>
+                      <TextInput 
+                        style={styles.inputField}
+                        value={steganographyPassword}
+                        onChangeText={setSteganographyPassword}
+                        placeholder="Enter password for extra steganography security"
+                        placeholderTextColor="#666"
+                        secureTextEntry
+                      />
+                      <Text style={styles.steganographyInfo}>
+                        💡 Messages will be hidden inside images using LSB steganography
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>👻 ID Destinatario</Text>
                   <TextInput 
                     style={styles.inputField}
-                    value={recipientCode}
-                    onChangeText={setRecipientCode}
-                    placeholder="Enter recipient's Ghost Code (e.g., GHOST7834)"
+                    value={recipientID}
+                    onChangeText={setRecipientID}
+                    placeholder="Inserisci ID destinatario (es: 001, 002, 003...)"
                     placeholderTextColor="#666"
-                    autoCapitalize="characters"
+                    keyboardType="numeric"
+                    maxLength={3}
                   />
+                  <Text style={styles.idHint}>
+                    💡 L'ID è come il numero di telefono, te lo dice una volta
+                  </Text>
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -779,6 +1135,16 @@ const GhostBridgeApp = () => {
                   </Text>
                 </TouchableOpacity>
                 
+                {/* Message sent confirmation */}
+                {lastSentImage && steganographyEnabled && (
+                  <View style={styles.shareSection}>
+                    <Text style={styles.shareTitle}>✅ Immagine Inviata Direttamente!</Text>
+                    <Text style={styles.shareInfo}>
+                      🔒 Il messaggio è stato nascosto nell'immagine e inviato direttamente all'ID {recipientID}
+                    </Text>
+                  </View>
+                )}
+                
                 <Text style={styles.infoText}>
                   Military-grade E2E encryption with Perfect Forward Secrecy
                 </Text>
@@ -792,8 +1158,56 @@ const GhostBridgeApp = () => {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Receive Ghost Message</Text>
                 
+                {/* Image Selection for Decryption */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Ghost Code Reception</Text>
+                  <Text style={styles.inputLabel}>📱 Opzione 1: Decripta immagine da WhatsApp/Telegram</Text>
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, styles.selectImageBtn]}
+                    onPress={selectImageForDecryption}
+                  >
+                    <Text style={styles.actionBtnText}>
+                      {selectedDecryptImage ? '✅ Immagine Selezionata' : '📷 Seleziona Immagine da Galleria'}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {selectedDecryptImage && (
+                    <View style={styles.selectedImagePreview}>
+                      <Image 
+                        source={{uri: selectedDecryptImage}} 
+                        style={styles.previewImage}
+                        resizeMode="cover"
+                      />
+                      <Text style={styles.previewText}>Immagine pronta per decrittazione</Text>
+                      <TouchableOpacity 
+                        style={styles.clearImageBtn}
+                        onPress={() => setSelectedDecryptImage(null)}
+                      >
+                        <Text style={styles.clearImageText}>❌ Rimuovi</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  
+                  {selectedDecryptImage && (
+                    <View style={styles.steganographyOptions}>
+                      <Text style={styles.optionLabel}>Password Steganografia (se usata):</Text>
+                      <TextInput 
+                        style={styles.inputField}
+                        value={steganographyPassword}
+                        onChangeText={setSteganographyPassword}
+                        placeholder="Inserisci password se l'immagine è protetta"
+                        placeholderTextColor="#666"
+                        secureTextEntry
+                      />
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.orDivider}>
+                  <Text style={styles.orText}>OPPURE</Text>
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>📝 Opzione 2: Ghost Code Reception</Text>
                   <TextInput 
                     style={styles.inputField}
                     value={receiveGhostCode}
@@ -804,18 +1218,33 @@ const GhostBridgeApp = () => {
                   />
                 </View>
 
+
                 <TouchableOpacity 
                   style={styles.actionBtn} 
                   onPress={retrieveMessage}
                   disabled={!isSecurityInitialized}
                 >
                   <Text style={styles.actionBtnText}>
-                    {isSecurityInitialized ? 'Retrieve & Decrypt' : 'Security Initializing...'}
+                    {selectedDecryptImage ? 'Decripta Immagine' : 'Retrieve & Decrypt'}
                   </Text>
                 </TouchableOpacity>
 
                 <View style={[styles.inputGroup, {marginTop: 30}]}>
                   <Text style={styles.inputLabel}>Decrypted Message</Text>
+                  
+                  {/* Show received image if it's an image message */}
+                  {receivedImage && (
+                    <View style={styles.receivedImageContainer}>
+                      <Text style={styles.imageLabel}>📷 Steganographic Image:</Text>
+                      <Image 
+                        source={{uri: `file://${receivedImage}`}} 
+                        style={styles.receivedImage}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.imageSubtext}>Hidden message extracted using LSB steganography</Text>
+                    </View>
+                  )}
+                  
                   <View style={styles.messageDisplay}>
                     <Text style={styles.messageText}>{displayMessage}</Text>
                   </View>
@@ -1156,6 +1585,183 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     fontSize: 16,
+  },
+  steganographyControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  modeButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#666',
+  },
+  modeButtonActive: {
+    backgroundColor: '#00ff88',
+    borderColor: '#00ff88',
+  },
+  modeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modeButtonTextActive: {
+    color: '#000',
+  },
+  steganographyOptions: {
+    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#00ff88',
+  },
+  optionLabel: {
+    color: '#00ff88',
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  steganographyInfo: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  receivedImageContainer: {
+    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#00ff88',
+    alignItems: 'center',
+  },
+  imageLabel: {
+    color: '#00ff88',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  receivedImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  imageSubtext: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  shareSection: {
+    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: '#00ff88',
+  },
+  shareTitle: {
+    color: '#00ff88',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  shareButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  shareBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  whatsappBtn: {
+    backgroundColor: '#25D366',
+  },
+  telegramBtn: {
+    backgroundColor: '#0088cc',
+  },
+  shareBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  shareInfo: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  selectImageBtn: {
+    backgroundColor: '#8800ff',
+  },
+  selectedImagePreview: {
+    backgroundColor: 'rgba(136, 0, 255, 0.1)',
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#8800ff',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  previewText: {
+    color: '#8800ff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  clearImageBtn: {
+    backgroundColor: '#ff4444',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  clearImageText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  orDivider: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  orText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: 'bold',
+    backgroundColor: '#2a2a2a',
+    paddingHorizontal: 20,
+    paddingVertical: 5,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#444',
+  },
+  idHint: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  receiveDirectBtn: {
+    backgroundColor: '#00cc66',
   },
 });
 

@@ -11,12 +11,35 @@ add_library(
     SecureMemoryWiper.cpp
 )
 
+# CONSTANT-TIME POST-QUANTUM CRYPTOGRAPHY LIBRARY
+add_library(
+    constanttimecrypto
+    SHARED
+    ConstantTimeCrypto.cpp
+)
+
 # Find required libraries
 find_library(log-lib log)
+
+# Compiler flags for constant-time operations
+target_compile_options(constanttimecrypto PRIVATE
+    -O2
+    -fno-omit-frame-pointer
+    -fstack-protector-strong
+    -D_FORTIFY_SOURCE=2
+    -Wno-unused-parameter
+    -DCONSTANT_TIME_CRYPTO
+)
 
 # Link libraries with Android-specific libs
 target_link_libraries(
     secureMemoryWiper
+    android
+    ${log-lib}
+)
+
+target_link_libraries(
+    constanttimecrypto
     android
     ${log-lib}
 )

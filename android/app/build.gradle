@@ -119,11 +119,11 @@ android {
                 keyAlias GHOSTBRIDGE_KEY_ALIAS
                 keyPassword GHOSTBRIDGE_KEY_PASSWORD
             } else {
-                // Fallback for local development
+                // Production: Environment variables required
                 storeFile file('ghostbridge-release-key.jks')
-                storePassword System.getenv('GHOSTBRIDGE_STORE_PASSWORD') ?: 'ghostbridge2024'
+                storePassword System.getenv('GHOSTBRIDGE_STORE_PASSWORD')
                 keyAlias 'ghostbridge-key'
-                keyPassword System.getenv('GHOSTBRIDGE_KEY_PASSWORD') ?: 'ghostbridge2024'
+                keyPassword System.getenv('GHOSTBRIDGE_KEY_PASSWORD')
             }
         }
     }

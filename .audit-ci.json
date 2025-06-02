@@ -1,0 +1,21 @@
+{
+  "moderate": true,
+  "high": true,
+  "critical": true,
+  "allowlist": [
+  ],
+  "advisories": {
+    "exclude": [
+    ]
+  },
+  "path-allowlist": [
+    "devDependencies"
+  ],
+  "show-found": true,
+  "show-not-found": false,
+  "skip-dev": true,
+  "report": {
+    "type": "full",
+    "output": "audit-ci-report.json"
+  }
+}
