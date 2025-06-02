@@ -43,3 +43,29 @@ target_link_libraries(
     android
     ${log-lib}
 )
+
+# ADVANCED SIDE-CHANNEL PROTECTION LIBRARY
+add_library(
+    sidechannelprotection
+    SHARED
+    AdvancedSideChannelProtection.cpp
+)
+
+# Compiler flags for maximum side-channel resistance
+target_compile_options(sidechannelprotection PRIVATE
+    -O2
+    -fno-omit-frame-pointer
+    -fstack-protector-strong
+    -D_FORTIFY_SOURCE=2
+    -Wno-unused-parameter
+    -DADVANCED_SIDECHANNEL_PROTECTION
+    -DPOWER_ANALYSIS_RESISTANT
+    -DEM_LEAKAGE_PROTECTION
+    -DCACHE_ATTACK_MITIGATION
+)
+
+target_link_libraries(
+    sidechannelprotection
+    android
+    ${log-lib}
+)

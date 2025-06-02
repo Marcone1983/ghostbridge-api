@@ -29,6 +29,11 @@ import RealFederatedLearning from './src/ml/RealFederatedLearning';
 import CompressionAwareSteganography from './src/crypto/CompressionAwareSteganography';
 import HardwareTEEManager from './src/security/HardwareTEEManager';
 import NANDAwareSecureDeletion from './src/security/NANDAwareSecureDeletion';
+import TrafficMetadataProtection from './src/network/TrafficMetadataProtection';
+import EndpointCompromiseProtection from './src/security/EndpointCompromiseProtection';
+import CryptographicAgility from './src/security/CryptographicAgility';
+import SocialRecoverySystem from './src/security/SocialRecoverySystem';
+import PoisoningResistantLearning from './src/ml/PoisoningResistantLearning';
 import JailMonkey from 'jail-monkey';
 import DeviceInfo from 'react-native-device-info';
 import Toast from 'react-native-toast-message';
@@ -164,7 +169,7 @@ const GhostBridgeApp = () => {
 
   const initializeSecurity = async () => {
     try {
-      showToast('info', 'Initializing 35+ MILITARY-GRADE security layers...');
+      showToast('info', 'Initializing 40+ DEATH-STAR-LEVEL security layers...');
       
       // 🔐 Initialize Hardware TEE Manager (NEW!)
       await HardwareTEEManager.initialize();
@@ -177,6 +182,26 @@ const GhostBridgeApp = () => {
       // 🧠 Initialize Federated Learning (NEW!)
       await RealFederatedLearning.initialize();
       console.log('✅ Federated Learning initialized');
+      
+      // 🌐 Initialize Traffic Metadata Protection (ULTIMATE!)
+      await TrafficMetadataProtection.initialize();
+      console.log('✅ Traffic Metadata Protection initialized');
+      
+      // 🛡️ Initialize Endpoint Compromise Protection (ULTIMATE!)
+      await EndpointCompromiseProtection.initialize();
+      console.log('✅ Endpoint Compromise Protection initialized');
+      
+      // 🔄 Initialize Cryptographic Agility (ULTIMATE!)
+      await CryptographicAgility.initialize();
+      console.log('✅ Cryptographic Agility initialized');
+      
+      // 🔑 Initialize Social Recovery System (ULTIMATE!)
+      await SocialRecoverySystem.initialize();
+      console.log('✅ Social Recovery System initialized');
+      
+      // 🧠 Initialize Poisoning-Resistant Learning (ULTIMATE!)
+      await PoisoningResistantLearning.initialize();
+      console.log('✅ Poisoning-Resistant Learning initialized');
       
       // Enable screen recording prevention
       if (SecurityModule) {
