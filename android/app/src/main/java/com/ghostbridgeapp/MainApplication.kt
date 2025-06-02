@@ -28,6 +28,7 @@ class MainApplication : Application(), ReactApplication {
               add(ClipboardSecurityPackage())  // Clipboard restrictions
               add(SecureMemoryPackage())  // DoD memory wiping
               add(HoneypotPackage())  // Multi-layer honeypots
+              add(RealHSMPackage())  // REAL Hardware Security Module
             }
 
         override fun getJSMainModuleName(): String = "index"

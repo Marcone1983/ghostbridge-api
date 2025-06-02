@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import GhostCrypto from './src/crypto/GhostCrypto';
 import RealMessageBridge from './src/crypto/RealMessageBridge';
+import RealGeolocationSpoofer from './src/security/RealGeolocationSpoofer';
+import AdvancedProxyChains from './src/network/AdvancedProxyChains';
 import JailMonkey from 'jail-monkey';
 import DeviceInfo from 'react-native-device-info';
 import Toast from 'react-native-toast-message';
@@ -177,6 +179,31 @@ const GhostBridgeApp = () => {
       // Clear clipboard if module available
       if (NativeModules.ClipboardSecurityModule) {
         await NativeModules.ClipboardSecurityModule.clearAndRestrictClipboard();
+      }
+      
+      // Activate geolocation spoofing for emergency anonymity
+      try {
+        await RealGeolocationSpoofer.startSpoofing({
+          latitude: RealGeolocationSpoofer.generateRealisticLocation().latitude,
+          longitude: RealGeolocationSpoofer.generateRealisticLocation().longitude,
+          movementEnabled: true,
+          geofenceEnabled: true
+        });
+        showToast('success', 'Emergency geolocation spoofing activated');
+      } catch (geoError) {
+        console.log('Geolocation spoofing failed:', geoError.message);
+      }
+      
+      // Create emergency proxy chain
+      try {
+        await AdvancedProxyChains.createProxyChain({
+          chainLength: 5,
+          proxyTypes: ['tor', 'socks5'],
+          performance: 'anonymity'
+        });
+        showToast('success', 'Emergency proxy chain established');
+      } catch (proxyError) {
+        console.log('Proxy chain creation failed:', proxyError.message);
       }
       
       Alert.alert('Emergency Burn', 'All data has been securely wiped with DoD 5220.22-M standard.');
