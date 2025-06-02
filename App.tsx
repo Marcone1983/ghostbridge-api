@@ -503,10 +503,9 @@ const GhostBridgeApp = () => {
             <View style={styles.logo}>
               <Image 
                 source={{uri: 'https://i.imgur.com/Cn5l3uH.png'}} 
-                style={styles.ghostIcon}
+                style={styles.ghostIconLarge}
                 resizeMode="contain"
               />
-              <Text style={styles.appTitle}>GhostBridge</Text>
             </View>
             <Text style={styles.subtitle}>Military-Grade Anonymous Messaging</Text>
             <Text style={styles.deviceId}>Device: {deviceId}</Text>
@@ -870,6 +869,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     marginBottom: 15,
+  },
+  ghostIconLarge: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+    alignSelf: 'center',
   },
   ghostEmojiIcon: {
     fontSize: 80,
