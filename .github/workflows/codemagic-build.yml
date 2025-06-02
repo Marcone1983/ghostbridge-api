@@ -1,0 +1,64 @@
+name: Codemagic Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Setup Codemagic CLI
+      run: |
+        pip3 install codemagic-cli-tools
+        
+    - name: Create codemagic.yaml
+      run: |
+        cat > codemagic.yaml << 'EOF'
+        workflows:
+          android-workflow:
+            name: Android build
+            max_build_duration: 30
+            instance_type: linux_x2
+            environment:
+              android_signing:
+                - ghostbridge_keystore
+              groups:
+                - github_credentials
+              vars:
+                PACKAGE_NAME: "com.ghostbridgeapp"
+              node: 18.17.0
+            scripts:
+              - name: Install dependencies
+                script: |
+                  npm ci
+              - name: Build Android APK
+                script: |
+                  cd android
+                  ./gradlew assembleDebug --no-daemon
+            artifacts:
+              - android/app/build/outputs/**/*.apk
+              - android/app/build/outputs/**/mapping.txt
+            publishing:
+              scripts:
+                - echo "Build completed"
+        EOF
+        
+    - name: Trigger Codemagic Build
+      run: |
+        echo "Codemagic build would be triggered here"
+        echo "For actual build, configure Codemagic webhook in repository settings"
