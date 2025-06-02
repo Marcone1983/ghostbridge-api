@@ -24,6 +24,10 @@ class MainApplication : Application(), ReactApplication {
               add(TemperatureSensorPackage())
               add(AdvancedSecurityPackage())
               add(RealSecurityPackage())
+              add(SecurityPackage())  // Critical: Screen recording prevention
+              add(ClipboardSecurityPackage())  // Clipboard restrictions
+              add(SecureMemoryPackage())  // DoD memory wiping
+              add(HoneypotPackage())  // Multi-layer honeypots
             }
 
         override fun getJSMainModuleName(): String = "index"
