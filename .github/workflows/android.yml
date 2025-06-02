@@ -1,0 +1,71 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          android/.gradle
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        
+    - name: Install dependencies (with retry)
+      run: |
+        npm ci --prefer-offline --no-audit --progress=false || npm install --prefer-offline --no-audit --progress=false
+        
+    - name: Create Release Keystore
+      run: |
+        cd android/app
+        if [ ! -f "ghostbridge-release-key.jks" ]; then
+          keytool -genkey -v -keystore ghostbridge-release-key.jks \
+            -alias ghostbridge-key -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass ghostbridge2024 -keypass ghostbridge2024 \
+            -dname "CN=GhostBridge, OU=Security, O=GhostBridge, L=Unknown, S=Unknown, C=US"
+        fi
+        
+    - name: Build Android APK
+      run: |
+        cd android
+        chmod +x gradlew
+        # Aumenta memoria JVM per evitare OutOfMemory
+        export GRADLE_OPTS="-Xmx4g -XX:MaxMetaspaceSize=512m"
+        ./gradlew assembleRelease --no-daemon --max-workers=2
+      env:
+        GHOSTBRIDGE_STORE_PASSWORD: ghostbridge2024
+        GHOSTBRIDGE_KEY_PASSWORD: ghostbridge2024
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: ghostbridge-apk
+        path: android/app/build/outputs/apk/release/app-release.apk
+        retention-days: 30
