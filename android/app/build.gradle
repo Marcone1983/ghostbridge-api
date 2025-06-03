@@ -113,10 +113,11 @@ android {
             keyPassword 'android'
         }
         release {
-        keyAlias 'ghostbridge'
-        storeFile file(System.getenv("BITRISE_IO_ANDROID_KEYSTORE_FILE"))
-        storePassword System.getenv("BITRISE_IO_KEYSTORE_PASSWORD")
-        keyPassword System.getenv("BITRISE_IO_KEYSTORE_PASSWORD")
+            keyAlias 'ghostbridge'
+            storeFile file(System.getenv("BITRISE_IO_ANDROID_KEYSTORE_FILE"))
+            storePassword System.getenv("BITRISE_IO_KEYSTORE_PASSWORD")
+            keyPassword System.getenv("BITRISE_IO_KEYSTORE_PASSWORD")
+        }
     }
     buildTypes {
         debug {
