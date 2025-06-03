@@ -64,7 +64,7 @@ jobs:
         export EXPO_TOKEN="fake-token-for-github"
         eas build --platform android --profile development --non-interactive --no-wait
       env:
-        EAS_BUILD_AUTOSUBMIT: false
+        EAS_BUILD_AUTOSUBMIT: true
         
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
