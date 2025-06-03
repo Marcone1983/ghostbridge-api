@@ -40,23 +40,168 @@ class PoisoningResistantLearning extends RealFederatedLearning {
   detectGradientAnomalies(gradients) {
     const anomalies = [];
     
-    // Calculate pairwise distances
+    // ENHANCED Multi-layer anomaly detection
+    
+    // 1. Statistical outlier detection using IQR method
+    const statisticalAnomalies = this.detectStatisticalAnomalies(gradients);
+    
+    // 2. Gradient magnitude analysis
+    const magnitudeAnomalies = this.detectMagnitudeAnomalies(gradients);
+    
+    // 3. Pattern-based detection for adversarial gradients
+    const patternAnomalies = this.detectPatternAnomalies(gradients);
+    
+    // 4. Temporal consistency check
+    const temporalAnomalies = this.detectTemporalAnomalies(gradients);
+    
+    // Combine all anomaly detection results
+    const allAnomalies = new Set([
+      ...statisticalAnomalies,
+      ...magnitudeAnomalies, 
+      ...patternAnomalies,
+      ...temporalAnomalies
+    ]);
+    
+    return Array.from(allAnomalies);
+  }
+  
+  detectStatisticalAnomalies(gradients) {
+    const anomalies = [];
     const distances = this.calculatePairwiseDistances(gradients);
     
-    // Identify outliers using statistical methods
+    // Use IQR method instead of simple standard deviation
     for (let i = 0; i < gradients.length; i++) {
       const participantDistances = distances[i];
-      const meanDistance = participantDistances.reduce((sum, d) => sum + d, 0) / participantDistances.length;
-      const variance = participantDistances.reduce((sum, d) => sum + Math.pow(d - meanDistance, 2), 0) / participantDistances.length;
-      const stdDev = Math.sqrt(variance);
+      participantDistances.sort((a, b) => a - b);
       
-      if (meanDistance > this.anomalyThreshold * stdDev) {
+      const q1 = participantDistances[Math.floor(participantDistances.length * 0.25)];
+      const q3 = participantDistances[Math.floor(participantDistances.length * 0.75)];
+      const iqr = q3 - q1;
+      const lowerBound = q1 - 1.5 * iqr;
+      const upperBound = q3 + 1.5 * iqr;
+      
+      const meanDistance = participantDistances.reduce((sum, d) => sum + d, 0) / participantDistances.length;
+      
+      if (meanDistance < lowerBound || meanDistance > upperBound) {
         anomalies.push(i);
-        console.warn(`🚨 Anomalous gradient detected from participant ${i}`);
+        console.warn(`🚨 Statistical anomaly detected from participant ${i}: distance=${meanDistance.toFixed(4)}`);
       }
     }
     
     return anomalies;
+  }
+  
+  detectMagnitudeAnomalies(gradients) {
+    const anomalies = [];
+    const magnitudes = gradients.map((grad, idx) => ({
+      index: idx,
+      magnitude: this.calculateGradientMagnitude(grad)
+    }));
+    
+    // Sort by magnitude
+    magnitudes.sort((a, b) => a.magnitude - b.magnitude);
+    
+    // Check for extremely large or small magnitudes
+    const medianMagnitude = magnitudes[Math.floor(magnitudes.length / 2)].magnitude;
+    const madThreshold = 3.0; // Median Absolute Deviation threshold
+    
+    for (const {index, magnitude} of magnitudes) {
+      const deviation = Math.abs(magnitude - medianMagnitude) / medianMagnitude;
+      
+      if (deviation > madThreshold || magnitude < 1e-8 || magnitude > 1e8) {
+        anomalies.push(index);
+        console.warn(`🚨 Magnitude anomaly detected from participant ${index}: magnitude=${magnitude.toExponential(3)}`);
+      }
+    }
+    
+    return anomalies;
+  }
+  
+  detectPatternAnomalies(gradients) {
+    const anomalies = [];
+    
+    for (let i = 0; i < gradients.length; i++) {
+      const gradient = gradients[i];
+      
+      // Check for suspicious patterns
+      if (this.hasRepeatingPatterns(gradient)) {
+        anomalies.push(i);
+        console.warn(`🚨 Repeating pattern detected in gradient ${i}`);
+        continue;
+      }
+      
+      if (this.hasUniformValues(gradient)) {
+        anomalies.push(i);
+        console.warn(`🚨 Uniform values detected in gradient ${i}`);
+        continue;
+      }
+      
+      if (this.hasExtremeSparsity(gradient)) {
+        anomalies.push(i);
+        console.warn(`🚨 Extreme sparsity detected in gradient ${i}`);
+        continue;
+      }
+    }
+    
+    return anomalies;
+  }
+  
+  detectTemporalAnomalies(gradients) {
+    // For temporal consistency, we'd need historical gradients
+    // This is a simplified implementation
+    return [];
+  }
+  
+  hasRepeatingPatterns(gradient) {
+    const flattened = this.flattenGradient(gradient);
+    if (flattened.length < 10) return false;
+    
+    // Check for repeating sequences
+    for (let patternLength = 2; patternLength <= 8; patternLength++) {
+      let repeats = 0;
+      for (let i = 0; i < flattened.length - patternLength * 2; i += patternLength) {
+        const pattern1 = flattened.slice(i, i + patternLength);
+        const pattern2 = flattened.slice(i + patternLength, i + 2 * patternLength);
+        
+        if (this.arraysEqual(pattern1, pattern2)) {
+          repeats++;
+        }
+      }
+      
+      if (repeats > flattened.length / (patternLength * 4)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  hasUniformValues(gradient) {
+    const flattened = this.flattenGradient(gradient);
+    if (flattened.length < 5) return false;
+    
+    const firstValue = flattened[0];
+    const uniformCount = flattened.filter(val => Math.abs(val - firstValue) < 1e-10).length;
+    
+    return uniformCount > flattened.length * 0.9;
+  }
+  
+  hasExtremeSparsity(gradient) {
+    const flattened = this.flattenGradient(gradient);
+    if (flattened.length < 10) return false;
+    
+    const zeroCount = flattened.filter(val => Math.abs(val) < 1e-12).length;
+    const sparsityRatio = zeroCount / flattened.length;
+    
+    return sparsityRatio > 0.95; // 95% zeros is suspicious
+  }
+  
+  arraysEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (Math.abs(a[i] - b[i]) > 1e-8) return false;
+    }
+    return true;
   }
 
   calculatePairwiseDistances(gradients) {

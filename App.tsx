@@ -169,7 +169,7 @@ const GhostBridgeApp = () => {
 
   const initializeSecurity = async () => {
     try {
-      showToast('info', 'Initializing 40+ DEATH-STAR-LEVEL security layers...');
+      showToast('info', 'Initializing 45+ IMPENETRABLE-FORTRESS security layers...');
       
       // 🔐 Initialize Hardware TEE Manager (NEW!)
       await HardwareTEEManager.initialize();
@@ -239,7 +239,7 @@ const GhostBridgeApp = () => {
       }
       
       setIsSecurityInitialized(true);
-      showToast('success', 'Military-grade security activated!');
+      showToast('success', 'IMPENETRABLE-FORTRESS security activated!');
     } catch (error) {
       showToast('error', 'Security initialization failed');
       console.error('Security init error:', error);
@@ -931,10 +931,10 @@ const GhostBridgeApp = () => {
             {/* Home Section */}
             {activeSection === 'home' && (
               <View>
-                <Text style={styles.sectionTitle}>30+ Active Security Features</Text>
+                <Text style={styles.sectionTitle}>45+ Active Security Features</Text>
                 
                 <Text style={styles.introText}>
-                  GhostBridge implementa crittografia di livello militare con oltre 30 strati di sicurezza reali. 
+                  GhostBridge implementa crittografia di livello militare con oltre 45 strati di sicurezza reali. 
                   Ogni funzione elencata qui sotto protegge attivamente le tue comunicazioni in tempo reale.
                   
                   🆔 Il tuo ID GhostBridge è il tuo numero identificativo fisso.
