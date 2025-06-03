@@ -1,31 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
+echo "Install dependencies"
+npm install
+echo "Usare variabili d'ambiente BITRISE_IO_ANDROID_KEYSTORE_FILE e BITRISE_IO_KEYSTORE_PASSWORD per la firma"
 
-echo "🚀 Building Ghost Bridge APK..."
-echo "================================"
+cd android || exit
+echo "Costruzione APK release"
+./gradlew assembleRelease
 
-cd android
+echo "Allineamento APK"
+cp app/build/outputs/apk/release/app-release.apk ../GhostBridge-Real.apk
+zipalign -v -p 4 ../GhostBridge-Real.apk GhostBridge-Real-aligned.apk
+apksigner sign --ks "$BITRISE_IO_ANDROID_KEYSTORE_FILE" --ks-key-alias ghostbridge \
+  --ks-pass env.BITRISE_IO_KEYSTORE_PASSWORD GhostBridge-Real-aligned.apk
 
-# Build debug APK
-echo "🔨 Building debug APK..."
-./gradlew assembleDebug
-
-# Check if build succeeded
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "✅ BUILD SUCCESSFUL!"
-    echo "================================"
-    echo "📱 APK Location:"
-    echo "app/build/outputs/apk/debug/app-debug.apk"
-    echo ""
-    echo "📥 To install on device:"
-    echo "adb install app/build/outputs/apk/debug/app-debug.apk"
-    echo ""
-    
-    # Show APK size
-    APK_SIZE=$(ls -lh app/build/outputs/apk/debug/app-debug.apk | awk '{print $5}')
-    echo "📦 APK Size: $APK_SIZE"
-else
-    echo ""
-    echo "❌ BUILD FAILED!"
-    echo "Check error messages above"
-fi
+echo "APK firmato e allineato: GhostBridge-Real-aligned.apk"

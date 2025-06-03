@@ -107,6 +107,7 @@ ios/.xcode.env.local
 buck-out/
 \.buckd/
 *.keystore
+*.jks
 !android/app/debug.keystore
 !android/app/ghostbridge-release-key.jks
 

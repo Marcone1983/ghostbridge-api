@@ -1,34 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Configurazione di TLS pinning per ghostbridge-backend -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">ghostbridge-ultra.vercel.app</domain>
-        <pin-set expiration="2025-12-31">
-            <!-- SHA256 fingerprints of expected certificates -->
-            <!-- Update these with actual certificate pins for production -->
-            <pin digest="SHA256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
-            <pin digest="SHA256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        <domain includeSubdomains="true">ghostbridge-backend.example.com</domain>
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+        <pin-set expiration="2026-01-01">
+            <!-- SHA-256 fingerprint del certificato di produzione -->
+            <pin digest="SHA-256">AbCdEfGhIjKlMnOpQrStUvWxYz0123456789ABCDEF=</pin>
         </pin-set>
     </domain-config>
-    
-    <!-- Firebase domains -->
+    <!-- Configurazione di TLS pinning per quantum.ghostbridge -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">firebase.googleapis.com</domain>
-        <domain includeSubdomains="true">firestore.googleapis.com</domain>
-        <domain includeSubdomains="true">firebaseapp.com</domain>
+        <domain includeSubdomains="true">quantum.ghostbridge.example.com</domain>
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+        <pin-set expiration="2026-01-01">
+            <pin digest="SHA-256">ZyXwVuTsRqPoNmLkJiHgFeDcBa0987654321FEDCBA=</pin>
+        </pin-set>
     </domain-config>
-    
-    <!-- Block all other domains by default -->
-    <base-config cleartextTrafficPermitted="false">
-        <trust-anchors>
-            <certificates src="system"/>
-        </trust-anchors>
-    </base-config>
-    
-    <!-- Debug configuration for development (remove in production) -->
-    <debug-overrides>
-        <trust-anchors>
-            <certificates src="system"/>
-            <certificates src="user"/>
-        </trust-anchors>
-    </debug-overrides>
 </network-security-config>

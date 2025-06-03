@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regole per il contatore degli utenti
+    match /system/userCounter {
+      // Solo le Cloud Functions possono leggere/scrivere
+      allow read: if false;
+      allow write: if false;
+    }
+    
+    // Regole per la collezione users
+    match /users/{userId} {
+      // Gli utenti possono leggere solo il proprio documento
+      allow read: if request.auth != null && 
+                    request.auth.uid == resource.data.firebaseUID;
+      // La creazione avviene solo tramite transazione nel SequentialIDManager
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+    
+    // Regole per i messaggi
+    match /messages/{msgId} {
+      // Il mittente può creare il messaggio
+      allow create: if request.auth != null && 
+                      request.auth.uid == request.resource.data.senderUID &&
+                      request.resource.data.read == false &&
+                      request.resource.data.timestamp == request.time;
+      
+      // Il destinatario può leggere il messaggio solo se non è già stato letto
+      allow read: if request.auth != null &&
+                    (request.auth.uid == resource.data.recipientUID ||
+                     request.auth.uid == resource.data.senderUID) &&
+                    resource.data.read == false;
+      
+      // Il destinatario può marcare il messaggio come letto
+      allow update: if request.auth != null &&
+                      request.auth.uid == resource.data.recipientUID &&
+                      request.resource.data.read == true &&
+                      resource.data.read == false;
+      
+      // Mittente o destinatario possono eliminare
+      allow delete: if request.auth != null &&
+                      (request.auth.uid == resource.data.recipientUID ||
+                       request.auth.uid == resource.data.senderUID);
+    }
+    
+    // Regole per i file steganografici in Storage sono gestite separatamente
+  }
+}
