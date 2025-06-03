@@ -42,10 +42,19 @@ class QuantumGravityEngine {
    * Calculate effective gravitational constant based on system energy
    * G_eff = G₀ * e^(-E/E_P)
    * Uses LRU cache for exp() calculations
+   * OVERFLOW PROTECTION: if E/E_P > 100, return 0.0 directly
    */
   calculateEffectiveG(energy) {
     // Normalize energy to [0, 1+]
     const normalizedEnergy = Math.max(0, energy);
+    
+    // OVERFLOW PROTECTION: if E/E_P > 100, return 0.0 directly
+    const energyRatio = normalizedEnergy / this.E_PLANCK;
+    if (energyRatio > 100) {
+      console.log(`⚠️ Extreme energy detected: E/E_P = ${energyRatio.toFixed(1)} > 100, G → 0`);
+      this.metrics.totalCalculations++;
+      return 0.0;
+    }
     
     // Round to 3 decimal places for cache key
     const cacheKey = Math.round(normalizedEnergy * 1000) / 1000;
@@ -57,8 +66,15 @@ class QuantumGravityEngine {
     }
     
     // Calculate G_eff = G₀ * e^(-E/E_P)
-    const exponent = -normalizedEnergy / this.E_PLANCK;
-    const G_eff = this.G0 * Math.exp(exponent);
+    let G_eff;
+    try {
+      const exponent = -energyRatio;
+      G_eff = this.G0 * Math.exp(exponent);
+    } catch (error) {
+      // Additional safety for overflow
+      console.warn(`Mathematical overflow in G calculation, returning 0`);
+      G_eff = 0.0;
+    }
     
     // Apply minimum threshold
     const result = Math.max(this.MIN_G, G_eff);

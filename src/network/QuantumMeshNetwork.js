@@ -251,22 +251,57 @@ class QuantumMeshNetwork {
    */
   async startFirebaseBeacon() {
     try {
-      // Use Firebase Realtime Database for node discovery
-      const beaconData = {
-        nodeId: this.nodeId,
-        timestamp: Date.now(),
-        lastSeen: Date.now(),
-        capabilities: ['QUANTUM_MESH', 'KYBER768', 'DILITHIUM3'],
-        status: 'ACTIVE'
-      };
+      // Import and initialize Firebase beacon
+      const FirebaseBeacon = require('./FirebaseBeacon').default;
+      this.firebaseBeacon = new FirebaseBeacon();
       
-      // Store beacon in Firebase with TTL
-      const beaconPath = `quantum_mesh_beacons/${this.nodeId}`;
-      // Would use Firebase SDK here
-      console.log('🔥 Firebase beacon initialized');
+      // Initialize with this node's ID
+      const result = await this.firebaseBeacon.initialize(this.nodeId);
+      
+      if (result.success) {
+        console.log('🔥 Firebase beacon initialized successfully');
+        
+        // Listen for discovered nodes
+        setInterval(() => {
+          const discoveredNodes = this.firebaseBeacon.getDiscoveredNodes();
+          this.updateMeshFromFirebase(discoveredNodes);
+        }, 10000); // Check every 10 seconds
+        
+      } else {
+        console.error('Firebase beacon initialization failed');
+      }
       
     } catch (error) {
       console.error('Firebase beacon initialization failed:', error.message);
+    }
+  }
+  
+  /**
+   * Update mesh network with nodes discovered via Firebase
+   */
+  updateMeshFromFirebase(discoveredNodes) {
+    for (const node of discoveredNodes) {
+      if (!this.meshNodes.has(node.nodeId)) {
+        // Add newly discovered node
+        this.meshNodes.set(node.nodeId, {
+          nodeId: node.nodeId,
+          lastSeen: node.timestamp,
+          capabilities: node.capabilities,
+          quantumState: node.quantumState,
+          isNeighbor: true,
+          discoveredVia: 'FIREBASE',
+          energy: node.quantumState?.energy || 0
+        });
+        
+        this.meshMetrics.nodesDiscovered++;
+        console.log(`📡 Added Firebase-discovered node: ${node.nodeId}`);
+      } else {
+        // Update existing node
+        const existingNode = this.meshNodes.get(node.nodeId);
+        existingNode.lastSeen = node.timestamp;
+        existingNode.quantumState = node.quantumState;
+        existingNode.energy = node.quantumState?.energy || 0;
+      }
     }
   }
 
@@ -672,9 +707,35 @@ class QuantumMeshNetwork {
     return CryptoJS.AES.encrypt(JSON.stringify(message), 'quantum_key_' + targetNodeId).toString();
   }
   
-  async signWithDilithium(data) {
-    // Would use actual Dilithium signature
-    return 'DILITHIUM3_SIG_' + CryptoJS.SHA3(data).toString().substring(0, 64);
+  async signWithDilithium(data, energyLevel = null) {
+    try {
+      // Get current energy level if not provided
+      const energy = energyLevel !== null ? energyLevel : (await this.getNodeEnergy()).packetsPerSecond;
+      const timestamp = Date.now();
+      
+      // Create signature payload with anti-replay protection
+      const signaturePayload = {
+        data: data,
+        energyLevel: energy,
+        timestamp: timestamp,
+        nodeId: this.nodeId
+      };
+      
+      // ANTI-REPLAY: Include energyLevel and timestamp in signature
+      const payloadString = JSON.stringify(signaturePayload);
+      const signature = 'DILITHIUM3_SIG_' + CryptoJS.SHA3(payloadString).toString().substring(0, 64);
+      
+      return {
+        signature: signature,
+        energyLevel: energy,
+        timestamp: timestamp,
+        algorithm: 'DILITHIUM3_ENERGY_SIGNED'
+      };
+      
+    } catch (error) {
+      console.error('Dilithium signing failed:', error.message);
+      return 'DILITHIUM3_SIG_ERROR';
+    }
   }
   
   generatePacketId() {

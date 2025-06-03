@@ -758,6 +758,194 @@ class AdaptiveThreatIntelligence {
     
     return activeAttacks;
   }
+  
+  /**
+   * THREAT-INTEL G-SWITCH DoS DETECTION
+   * Detects attempts to manipulate quantum mode via energy spikes
+   */
+  async detectGSwitchDoS(nodeId, energyLevel, timestamp) {
+    try {
+      const now = timestamp || Date.now();
+      const trackingKey = `g_switch_${nodeId}`;
+      
+      // Get recent energy spikes for this node
+      const recentSpikes = this.nodeIntelligence.get(trackingKey) || [];
+      
+      // Add current spike if energy > 800 (near quantum threshold)
+      if (energyLevel > 800) {
+        recentSpikes.push({
+          energy: energyLevel,
+          timestamp: now,
+          isQuantumTrigger: energyLevel > 950
+        });
+      }
+      
+      // Keep only last 2 minutes of data
+      const cutoff = now - 120000;
+      const filteredSpikes = recentSpikes.filter(spike => spike.timestamp > cutoff);
+      
+      // Update tracking
+      this.nodeIntelligence.set(trackingKey, filteredSpikes);
+      
+      // Analyze patterns for DoS indicators
+      const analysis = this.analyzeGSwitchPattern(filteredSpikes, now);
+      
+      if (analysis.isDosLikely) {
+        console.warn(`🚨 Potential G-switch DoS detected from ${nodeId}`);
+        console.warn(`   Pattern: ${analysis.reason}`);
+        console.warn(`   Risk level: ${analysis.riskLevel}`);
+        
+        // Create threat assessment
+        const threat = {
+          id: `G_SWITCH_DOS_${nodeId}_${now}`,
+          type: 'G_SWITCH_MANIPULATION',
+          nodeId: nodeId,
+          confidence: analysis.confidence,
+          riskLevel: analysis.riskLevel,
+          evidence: analysis.evidence,
+          timestamp: now,
+          recommendedAction: analysis.recommendedAction
+        };
+        
+        // Store in threat database
+        this.threatDatabase.set(threat.id, threat);
+        
+        // Update metrics
+        this.threatMetrics.threatsDetected++;
+        
+        return threat;
+      }
+      
+      return null;
+      
+    } catch (error) {
+      console.error('G-switch DoS detection failed:', error.message);
+      return null;
+    }
+  }
+  
+  /**
+   * Analyze G-switch energy patterns for DoS indicators
+   */
+  analyzeGSwitchPattern(spikes, currentTime) {
+    if (spikes.length < 2) {
+      return { isDosLikely: false, reason: 'insufficient_data' };
+    }
+    
+    const analysis = {
+      isDosLikely: false,
+      reason: 'normal_behavior',
+      confidence: 0.0,
+      riskLevel: 'LOW',
+      evidence: [],
+      recommendedAction: 'monitor'
+    };
+    
+    // Pattern 1: Rapid quantum mode triggers (>5 in 2 minutes)
+    const quantumTriggers = spikes.filter(s => s.isQuantumTrigger);
+    if (quantumTriggers.length > 5) {
+      analysis.isDosLikely = true;
+      analysis.reason = 'rapid_quantum_triggers';
+      analysis.confidence = Math.min(0.95, quantumTriggers.length * 0.15);
+      analysis.riskLevel = 'HIGH';
+      analysis.evidence.push(`${quantumTriggers.length} quantum mode triggers in 2 minutes`);
+      analysis.recommendedAction = 'isolate_node';
+    }
+    
+    // Pattern 2: Oscillating energy levels (quantum -> classical -> quantum)
+    if (this.detectEnergyOscillation(spikes)) {
+      analysis.isDosLikely = true;
+      analysis.reason = 'energy_oscillation';
+      analysis.confidence = Math.max(analysis.confidence, 0.8);
+      analysis.riskLevel = analysis.riskLevel === 'HIGH' ? 'HIGH' : 'MEDIUM';
+      analysis.evidence.push('Rapid energy oscillation detected');
+      analysis.recommendedAction = 'rate_limit';
+    }
+    
+    // Pattern 3: Sustained high energy (>900 for >30s)
+    const sustainedHigh = this.detectSustainedHighEnergy(spikes, currentTime);
+    if (sustainedHigh.detected) {
+      analysis.isDosLikely = true;
+      analysis.reason = 'sustained_high_energy';
+      analysis.confidence = Math.max(analysis.confidence, 0.7);
+      analysis.riskLevel = 'MEDIUM';
+      analysis.evidence.push(`Sustained high energy for ${sustainedHigh.duration}ms`);
+      analysis.recommendedAction = 'investigate';
+    }
+    
+    // Pattern 4: Artificial energy spikes (too precise values)
+    if (this.detectArtificialSpikes(spikes)) {
+      analysis.isDosLikely = true;
+      analysis.reason = 'artificial_energy_values';
+      analysis.confidence = Math.max(analysis.confidence, 0.9);
+      analysis.riskLevel = 'HIGH';
+      analysis.evidence.push('Artificial/scripted energy values detected');
+      analysis.recommendedAction = 'block_node';
+    }
+    
+    return analysis;
+  }
+  
+  /**
+   * Detect energy oscillation patterns
+   */
+  detectEnergyOscillation(spikes) {
+    if (spikes.length < 4) return false;
+    
+    let oscillations = 0;
+    for (let i = 1; i < spikes.length - 1; i++) {
+      const prev = spikes[i - 1].energy;
+      const curr = spikes[i].energy;
+      const next = spikes[i + 1].energy;
+      
+      // Check for peak or valley
+      if ((curr > prev && curr > next) || (curr < prev && curr < next)) {
+        oscillations++;
+      }
+    }
+    
+    // If more than 50% of points are oscillation points
+    return oscillations > spikes.length * 0.5;
+  }
+  
+  /**
+   * Detect sustained high energy
+   */
+  detectSustainedHighEnergy(spikes, currentTime) {
+    const highEnergySpikes = spikes.filter(s => s.energy > 900);
+    if (highEnergySpikes.length < 2) {
+      return { detected: false, duration: 0 };
+    }
+    
+    const firstHigh = highEnergySpikes[0].timestamp;
+    const lastHigh = highEnergySpikes[highEnergySpikes.length - 1].timestamp;
+    const duration = lastHigh - firstHigh;
+    
+    return {
+      detected: duration > 30000, // 30 seconds
+      duration: duration
+    };
+  }
+  
+  /**
+   * Detect artificial/scripted energy spikes
+   */
+  detectArtificialSpikes(spikes) {
+    if (spikes.length < 3) return false;
+    
+    // Check for round numbers (900, 950, 1000 exactly)
+    const roundNumbers = spikes.filter(s => 
+      s.energy === 900 || s.energy === 950 || s.energy === 1000
+    );
+    
+    // Check for identical values
+    const energyValues = spikes.map(s => s.energy);
+    const uniqueValues = new Set(energyValues);
+    
+    // If >70% are round numbers or <30% unique values, likely artificial
+    return (roundNumbers.length / spikes.length > 0.7) || 
+           (uniqueValues.size / energyValues.length < 0.3);
+  }
 }
 
 export default new AdaptiveThreatIntelligence();
