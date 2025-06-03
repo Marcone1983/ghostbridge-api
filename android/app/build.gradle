@@ -118,8 +118,6 @@ android {
         storePassword System.getenv("BITRISE_IO_KEYSTORE_PASSWORD")
         keyPassword System.getenv("BITRISE_IO_KEYSTORE_PASSWORD")
     }
-}
-    }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
