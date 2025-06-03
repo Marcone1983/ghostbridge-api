@@ -7,6 +7,7 @@
 
 import CryptoJS from 'crypto-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import quantumGravityEngine from '../physics/QuantumGravityEngine';
 
 class GhostProtocols {
   constructor() {
@@ -156,6 +157,17 @@ class GhostProtocols {
       // Generate unique protocol instance ID
       const instanceId = this.generateProtocolInstanceId(protocolType);
 
+      // Get current system energy for gravity calculations
+      const systemEnergy = await this.getSystemEnergy();
+      const G_eff = quantumGravityEngine.calculateEffectiveG(systemEnergy);
+      const ttlScaling = quantumGravityEngine.getProtocolTTLScaling(G_eff);
+      
+      // Apply gravity scaling to lifespan with minTTL
+      const baseLifespan = config.lifespan || template.lifespan;
+      const minTTL = config.minTTL || 100; // 100ms minimum TTL as specified
+      const scaledLifespan = Math.round(baseLifespan * ttlScaling);
+      const adjustedLifespan = Math.max(scaledLifespan, minTTL);
+      
       // Create materialized protocol
       const materializedProtocol = {
         instanceId,
@@ -163,10 +175,17 @@ class GhostProtocols {
         template,
         config: { ...template, ...config },
         materializedAt: Date.now(),
-        expiresAt: Date.now() + (config.lifespan || template.lifespan),
+        baseLifespan: baseLifespan,
+        adjustedLifespan: adjustedLifespan,
+        expiresAt: Date.now() + adjustedLifespan,
         state: 'MATERIALIZING',
         quantumState: await this.initializeQuantumState(),
         cryptoContext: await this.createCryptoContext(template.cryptoStack),
+        gravityState: {
+          G_eff: G_eff,
+          ttlScaling: ttlScaling,
+          isQuantumMode: quantumGravityEngine.isQuantumMode(G_eff)
+        },
         metrics: {
           messagesProcessed: 0,
           bytesTransferred: 0,
@@ -184,14 +203,29 @@ class GhostProtocols {
       this.scheduleProtocolVanishing(instanceId, materializedProtocol.expiresAt);
 
       const materializationTime = Date.now() - startTime;
-      console.log(`✨ Protocol ${protocolType} materialized in ${materializationTime}ms`);
+      
+      // Log gravity effects
+      if (materializedProtocol.gravityState.isQuantumMode) {
+        console.log(`⚛️ Protocol ${protocolType} in QUANTUM MODE! TTL: ${adjustedLifespan}ms (${(ttlScaling * 100).toFixed(1)}% of normal, min=${minTTL}ms)`);
+      } else if (adjustedLifespan < baseLifespan * 0.5) {
+        console.log(`🌌 Protocol ${protocolType} with reduced TTL: ${adjustedLifespan}ms (G=${G_eff.toFixed(3)}, min=${minTTL}ms)`);
+      } else {
+        console.log(`✨ Protocol ${protocolType} materialized in ${materializationTime}ms | TTL: ${adjustedLifespan}ms`);
+      }
 
       return {
         success: true,
         instanceId,
         type: protocolType,
         materializationTime,
-        expiresAt: materializedProtocol.expiresAt
+        baseLifespan: baseLifespan,
+        adjustedLifespan: adjustedLifespan,
+        expiresAt: materializedProtocol.expiresAt,
+        gravityEffects: {
+          G_eff: G_eff,
+          ttlReduction: (1 - ttlScaling) * 100,
+          quantumMode: materializedProtocol.gravityState.isQuantumMode
+        }
       };
 
     } catch (error) {
@@ -556,6 +590,63 @@ class GhostProtocols {
   async performNetworkDissolve(protocol) { console.log('🕸️💨 Network dissolved'); }
   async performQuantumDecoherence(protocol) { console.log('🌀💫 Quantum decoherence'); }
   async injectQuantumNoise(protocol) { console.log('📡 Quantum noise injected'); }
+  
+  /**
+   * Get system energy for gravity calculations
+   */
+  async getSystemEnergy() {
+    try {
+      // Get metrics from various sources
+      const protocolCount = this.materializedProtocols.size;
+      const messageRate = this.calculateMessageRate();
+      
+      // Calculate traffic pressure
+      const packetsPerSecond = messageRate * 10; // Estimate
+      
+      // Get system load (simulated for now)
+      const cpuLoad = Math.min(1.0, protocolCount * 0.1);
+      const memoryPressure = Math.min(1.0, protocolCount * 0.05);
+      
+      // Calculate threat score based on protocol activity
+      const rapidMaterializationThreat = this.detectRapidMaterialization();
+      
+      return quantumGravityEngine.computeSystemEnergy({
+        packetsPerSecond,
+        cpuLoad,
+        batteryDrain: cpuLoad * 0.5,
+        threatScore: rapidMaterializationThreat,
+        activeConnections: protocolCount,
+        memoryPressure
+      });
+      
+    } catch (error) {
+      console.error('Failed to get system energy:', error.message);
+      return 0.5; // Default medium energy
+    }
+  }
+  
+  /**
+   * Calculate message rate across all protocols
+   */
+  calculateMessageRate() {
+    let totalMessages = 0;
+    for (const protocol of this.materializedProtocols.values()) {
+      totalMessages += protocol.metrics.messagesProcessed || 0;
+    }
+    return totalMessages / Math.max(1, this.materializedProtocols.size);
+  }
+  
+  /**
+   * Detect rapid protocol materialization (potential attack)
+   */
+  detectRapidMaterialization() {
+    const recentProtocols = this.protocolHistory.filter(p => 
+      (Date.now() - p.vanishedAt) < 60000 // Last minute
+    );
+    
+    // If more than 20 protocols in last minute, it's suspicious
+    return Math.min(1.0, recentProtocols.length / 20);
+  }
 }
 
 export default new GhostProtocols();

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CryptoJS from 'crypto-js';
 import { NativeModules, DeviceEventEmitter } from 'react-native';
 import CryptographicAgility from '../security/CryptographicAgility';
+import quantumGravityEngine from '../physics/QuantumGravityEngine';
 
 class QuantumMeshNetwork {
   constructor() {
@@ -23,7 +24,25 @@ class QuantumMeshNetwork {
       nodesDiscovered: 0,
       messagesRouted: 0,
       networkHealings: 0,
-      quantumChannelsEstablished: 0
+      quantumChannelsEstablished: 0,
+      gravityAdjustments: 0,
+      quantumTeleports: 0
+    };
+    
+    // Node energy tracking
+    this.nodeEnergy = {
+      packetsPerSecond: 0,
+      cpuLoad: 0,
+      batteryDrain: 0,
+      threatScore: 0,
+      activeConnections: 0,
+      memoryPressure: 0
+    };
+    
+    // Performance counters
+    this.performanceCounters = {
+      lastPacketCount: 0,
+      lastCountTime: Date.now()
     };
   }
 
@@ -565,12 +584,50 @@ class QuantumMeshNetwork {
   }
   
   async checkNodeHealth(nodeId, nodeInfo) {
-    return {
-      isActive: true,
-      isCompromised: false,
-      needsHealing: false,
-      issues: []
-    };
+    try {
+      const lastSeen = nodeInfo.lastSeen || 0;
+      const now = Date.now();
+      const timeSinceLastSeen = now - lastSeen;
+      
+      // Check if node should be isolated based on gravity
+      const nodeEnergy = nodeInfo.energy || 0;
+      const shouldIsolate = quantumGravityEngine.shouldIsolateNode(nodeEnergy);
+      
+      const health = {
+        isActive: timeSinceLastSeen < 60000, // Active if seen in last minute
+        isCompromised: shouldIsolate,
+        needsHealing: false,
+        issues: []
+      };
+      
+      // High energy nodes (under attack or overloaded) get isolated
+      if (shouldIsolate) {
+        health.issues.push('GRAVITY_NULLIFICATION');
+        console.log(`🌌 Node ${nodeId} isolated by gravity nullification (E=${nodeEnergy.toFixed(3)})`);
+      }
+      
+      // Check for other issues
+      if (timeSinceLastSeen > 30000) {
+        health.issues.push('SLOW_RESPONSE');
+        health.needsHealing = true;
+      }
+      
+      if (nodeInfo.failedConnections > 5) {
+        health.issues.push('CONNECTION_FAILURES');
+        health.needsHealing = true;
+      }
+      
+      return health;
+      
+    } catch (error) {
+      console.error(`Health check failed for node ${nodeId}:`, error.message);
+      return {
+        isActive: false,
+        isCompromised: true,
+        needsHealing: true,
+        issues: ['HEALTH_CHECK_ERROR']
+      };
+    }
   }
   
   async isolateCompromisedNode(nodeId) {
@@ -655,9 +712,109 @@ class QuantumMeshNetwork {
     );
   }
   
+  /**
+   * Get current node energy metrics
+   */
+  async getNodeEnergy() {
+    try {
+      // Update packets per second
+      const now = Date.now();
+      const timeDelta = (now - this.performanceCounters.lastCountTime) / 1000;
+      this.nodeEnergy.packetsPerSecond = 
+        (this.meshMetrics.messagesRouted - this.performanceCounters.lastPacketCount) / timeDelta;
+      
+      this.performanceCounters.lastPacketCount = this.meshMetrics.messagesRouted;
+      this.performanceCounters.lastCountTime = now;
+      
+      // Get system metrics (would use native modules in production)
+      this.nodeEnergy.cpuLoad = Math.random() * 0.5; // Simulated
+      this.nodeEnergy.batteryDrain = Math.random() * 0.3; // Simulated
+      this.nodeEnergy.memoryPressure = Math.random() * 0.4; // Simulated
+      this.nodeEnergy.activeConnections = this.quantumChannels.size;
+      
+      // Get threat score from any active threats
+      this.nodeEnergy.threatScore = await this.getCurrentThreatLevel();
+      
+      return this.nodeEnergy;
+      
+    } catch (error) {
+      console.error('Failed to get node energy:', error.message);
+      return this.nodeEnergy; // Return last known values
+    }
+  }
+  
+  /**
+   * Get current threat level from security systems
+   */
+  async getCurrentThreatLevel() {
+    // Would integrate with AdaptiveThreatIntelligence
+    // For now, simulate based on failed connections
+    const failedConnections = Array.from(this.meshNodes.values())
+      .reduce((sum, node) => sum + (node.failedConnections || 0), 0);
+    
+    return Math.min(1.0, failedConnections / 20);
+  }
+  
+  /**
+   * Estimate latency between two nodes
+   */
+  async estimateLatency(fromNode, toNode) {
+    // In production, would use actual ping measurements
+    // For now, return simulated latency
+    const baseLatency = 10; // ms
+    const jitter = Math.random() * 5;
+    return baseLatency + jitter;
+  }
+  
+  /**
+   * Get node reliability score
+   */
+  async getNodeReliability(nodeId) {
+    const nodeInfo = this.meshNodes.get(nodeId);
+    if (!nodeInfo) return 0.5;
+    
+    // Calculate reliability based on uptime and success rate
+    const uptime = nodeInfo.uptime || 0.9;
+    const successRate = nodeInfo.successRate || 0.95;
+    
+    return (uptime + successRate) / 2;
+  }
+  
   async calculateQuantumEdgeWeight(fromNode, toNode) {
-    // Calculate routing weight considering quantum resistance
-    return 1.0; // Simplified
+    try {
+      // Get current node energy
+      const nodeEnergy = await this.getNodeEnergy();
+      const systemEnergy = quantumGravityEngine.computeSystemEnergy(nodeEnergy);
+      
+      // Calculate effective gravity
+      const G_eff = quantumGravityEngine.calculateEffectiveG(systemEnergy);
+      
+      // Get base latency
+      const base_latency_ms = await this.estimateLatency(fromNode, toNode);
+      const hops = 1; // Direct connection = 1 hop
+      
+      // FORMULA FROM PAPER: w = base_latency_ms * G + hops
+      const weight = base_latency_ms * G_eff + hops;
+      
+      // Check for quantum mode (teleportation)
+      if (quantumGravityEngine.isQuantumMode(G_eff)) {
+        console.log(`⚡ Quantum teleportation active: ${fromNode} → ${toNode} (G=${G_eff.toExponential(2)})`);
+        this.meshMetrics.quantumTeleports++;
+        return 0.001; // Near-instant routing (~0 cost teleport)
+      }
+      
+      // Log gravity effects when significant
+      if (G_eff < 0.5) {
+        console.log(`🌌 Low gravity routing: ${fromNode} → ${toNode} | G=${G_eff.toFixed(3)} | weight=${weight.toFixed(1)}ms`);
+      }
+      
+      this.meshMetrics.gravityAdjustments++;
+      return weight;
+      
+    } catch (error) {
+      console.error('Quantum edge weight calculation failed:', error.message);
+      return 1.0; // Fallback to default
+    }
   }
 }
 

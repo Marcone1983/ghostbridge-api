@@ -1,0 +1,447 @@
+/**
+ * GHOST BRIDGE EPHEMERAL CHANNEL PROTOCOL
+ * Protobuf specification for materialized protocols
+ * Production-ready protocol definitions with security considerations
+ */
+
+syntax = "proto3";
+package ghostbridge.protocols;
+
+// Main ephemeral channel message wrapper
+message EphemeralChannelMessage {
+  // Message metadata
+  MessageHeader header = 1;
+  
+  // Protocol-specific payload
+  oneof payload {
+    PhantomWhisperPayload phantom_whisper = 2;
+    SpectralBridgePayload spectral_bridge = 3;
+    ShadowMeshPayload shadow_mesh = 4;
+    WraithTunnelPayload wraith_tunnel = 5;
+  }
+  
+  // Security context
+  SecurityContext security = 6;
+  
+  // Materialization metadata
+  MaterializationContext materialization = 7;
+}
+
+// Message header with TTL and routing info
+message MessageHeader {
+  // Unique message identifier
+  string message_id = 1;
+  
+  // Protocol type identifier
+  ProtocolType protocol_type = 2;
+  
+  // Source and destination node IDs
+  string source_node_id = 3;
+  string destination_node_id = 4;
+  
+  // Timestamp and TTL
+  int64 timestamp_ms = 5;
+  int64 ttl_ms = 6;
+  int64 expires_at_ms = 7;
+  
+  // Routing information
+  repeated string routing_path = 8;
+  int32 hop_count = 9;
+  int32 max_hops = 10;
+  
+  // Message priority and flags
+  MessagePriority priority = 11;
+  MessageFlags flags = 12;
+}
+
+// Protocol type enumeration
+enum ProtocolType {
+  PROTOCOL_UNKNOWN = 0;
+  PHANTOM_WHISPER = 1;
+  SPECTRAL_BRIDGE = 2;
+  SHADOW_MESH = 3;
+  WRAITH_TUNNEL = 4;
+}
+
+// Message priority levels
+enum MessagePriority {
+  PRIORITY_LOW = 0;
+  PRIORITY_NORMAL = 1;
+  PRIORITY_HIGH = 2;
+  PRIORITY_URGENT = 3;
+}
+
+// Message flags for special handling
+message MessageFlags {
+  bool requires_ack = 1;
+  bool is_broadcast = 2;
+  bool is_multicast = 3;
+  bool requires_perfect_forward_secrecy = 4;
+  bool requires_deniable_auth = 5;
+  bool auto_vanish_on_read = 6;
+}
+
+// Security context for all messages
+message SecurityContext {
+  // Cryptographic algorithms used
+  CryptoAlgorithms crypto = 1;
+  
+  // Key material pointers (not the keys themselves!)
+  KeyMaterialPointers key_pointers = 2;
+  
+  // Authentication data
+  AuthenticationData auth = 3;
+  
+  // Quantum resistance level
+  QuantumResistanceLevel quantum_level = 4;
+}
+
+// Cryptographic algorithms specification
+message CryptoAlgorithms {
+  string key_exchange = 1;        // e.g., "KYBER768"
+  string signature = 2;           // e.g., "DILITHIUM3" 
+  string symmetric_cipher = 3;    // e.g., "AES256_GCM"
+  string hash_function = 4;       // e.g., "SHA3_256"
+  string mac_algorithm = 5;       // e.g., "HMAC_SHA3_256"
+}
+
+// Key material pointers (never include actual keys in messages!)
+message KeyMaterialPointers {
+  string session_key_id = 1;
+  string ephemeral_key_id = 2;
+  string signature_key_id = 3;
+  int64 key_generation_timestamp = 4;
+  int32 key_rotation_sequence = 5;
+}
+
+// Authentication data
+message AuthenticationData {
+  bytes message_auth_code = 1;
+  bytes digital_signature = 2;
+  string signer_node_id = 3;
+  int64 auth_timestamp = 4;
+}
+
+// Quantum resistance levels
+enum QuantumResistanceLevel {
+  QUANTUM_VULNERABLE = 0;     // Classical cryptography only
+  QUANTUM_RESISTANT = 1;      // Hybrid classical + post-quantum
+  QUANTUM_SAFE = 2;          // Full post-quantum cryptography
+}
+
+// Materialization context
+message MaterializationContext {
+  // When this protocol was materialized
+  int64 materialized_at_ms = 1;
+  
+  // When it will vanish
+  int64 vanish_at_ms = 2;
+  
+  // Materialization method used
+  MaterializationMethod method = 3;
+  
+  // Vanishing method to use
+  VanishingMethod vanish_method = 4;
+  
+  // Memory arena information
+  MemoryArenaInfo memory_arena = 5;
+  
+  // Performance constraints
+  PerformanceConstraints constraints = 6;
+}
+
+// Materialization methods
+enum MaterializationMethod {
+  MATERIALIZE_MEMORY = 0;     // Pure in-memory materialization
+  MATERIALIZE_NETWORK = 1;    // Network-assisted materialization
+  MATERIALIZE_HYBRID = 2;     // Hybrid memory + network
+}
+
+// Vanishing methods
+enum VanishingMethod {
+  VANISH_MEMORY_WIPE = 0;     // Standard memory wiping
+  VANISH_DOD_5220 = 1;        // DoD 5220.22-M standard
+  VANISH_QUANTUM_NOISE = 2;   // Quantum noise injection
+  VANISH_FORENSIC_RESISTANT = 3; // Anti-forensics techniques
+}
+
+// Memory arena information
+message MemoryArenaInfo {
+  string arena_id = 1;
+  int64 allocated_bytes = 2;
+  bool is_locked = 3;
+  bool is_encrypted = 4;
+  string arena_type = 5; // "HEAP", "MMAP", "SECURE_HEAP"
+}
+
+// Performance constraints
+message PerformanceConstraints {
+  int32 max_latency_ms = 1;
+  int32 max_bandwidth_kbps = 2;
+  int32 max_memory_mb = 3;
+  int32 max_cpu_percent = 4;
+  bool energy_saving_mode = 5;
+}
+
+// PHANTOM WHISPER specific payload
+message PhantomWhisperPayload {
+  // Ultra-fast ephemeral message
+  bytes encrypted_message = 1;
+  
+  // Single-use nonce
+  bytes nonce = 2;
+  
+  // Message sequence number
+  int32 sequence_number = 3;
+  
+  // Auto-destruction timer
+  int32 auto_destruct_ms = 4;
+  
+  // Whisper-specific flags
+  PhantomWhisperFlags whisper_flags = 5;
+}
+
+message PhantomWhisperFlags {
+  bool burn_after_reading = 1;
+  bool require_immediate_ack = 2;
+  bool use_steganography = 3;
+}
+
+// SPECTRAL BRIDGE specific payload
+message SpectralBridgePayload {
+  // Bridge establishment or data
+  oneof bridge_data {
+    BridgeHandshake handshake = 1;
+    BridgeDataFrame data_frame = 2;
+    BridgeControl control = 3;
+  }
+  
+  // Perfect Forward Secrecy state
+  PFSState pfs_state = 4;
+  
+  // Bridge session information
+  BridgeSession session = 5;
+}
+
+message BridgeHandshake {
+  bytes ephemeral_public_key = 1;
+  bytes key_exchange_data = 2;
+  string supported_ciphers = 3;
+  int64 handshake_timestamp = 4;
+}
+
+message BridgeDataFrame {
+  bytes encrypted_payload = 1;
+  int32 frame_sequence = 2;
+  bool is_final_frame = 3;
+  int32 frame_size = 4;
+}
+
+message BridgeControl {
+  ControlType control_type = 1;
+  bytes control_data = 2;
+  
+  enum ControlType {
+    CONTROL_UNKNOWN = 0;
+    CONTROL_KEEP_ALIVE = 1;
+    CONTROL_CLOSE = 2;
+    CONTROL_REKEY = 3;
+    CONTROL_ERROR = 4;
+  }
+}
+
+message PFSState {
+  int32 ratchet_counter = 1;
+  bytes chain_key_hash = 2; // Hash only, never the key itself
+  int64 last_ratchet_timestamp = 3;
+}
+
+message BridgeSession {
+  string session_id = 1;
+  int64 established_at = 2;
+  int64 last_activity = 3;
+  int32 frames_exchanged = 4;
+  bool is_bidirectional = 5;
+}
+
+// SHADOW MESH specific payload
+message ShadowMeshPayload {
+  // Mesh extension operation
+  MeshOperation operation = 1;
+  
+  // Temporary routing information
+  TemporaryRouting routing = 2;
+  
+  // Load balancing data
+  LoadBalancingInfo load_balancing = 3;
+  
+  // Mesh topology snapshot
+  MeshTopology topology = 4;
+}
+
+message MeshOperation {
+  OperationType operation_type = 1;
+  repeated string affected_nodes = 2;
+  bytes operation_data = 3;
+  int64 operation_timestamp = 4;
+  
+  enum OperationType {
+    OPERATION_UNKNOWN = 0;
+    OPERATION_EXTEND = 1;
+    OPERATION_CONTRACT = 2;
+    OPERATION_REBALANCE = 3;
+    OPERATION_HEAL = 4;
+  }
+}
+
+message TemporaryRouting {
+  repeated RoutingEntry routes = 1;
+  int64 routing_table_version = 2;
+  int32 ttl_seconds = 3;
+}
+
+message RoutingEntry {
+  string destination_node = 1;
+  repeated string path = 2;
+  int32 path_weight = 3;
+  int32 path_latency_ms = 4;
+  float path_reliability = 5;
+}
+
+message LoadBalancingInfo {
+  repeated NodeLoad node_loads = 1;
+  string balancing_strategy = 2;
+  int64 load_snapshot_timestamp = 3;
+}
+
+message NodeLoad {
+  string node_id = 1;
+  float cpu_usage = 2;
+  float memory_usage = 3;
+  int32 active_connections = 4;
+  int32 messages_per_second = 5;
+  float battery_level = 6;
+}
+
+message MeshTopology {
+  repeated MeshNode nodes = 1;
+  repeated MeshEdge edges = 2;
+  int64 topology_version = 3;
+  string topology_hash = 4;
+}
+
+message MeshNode {
+  string node_id = 1;
+  NodeCapabilities capabilities = 2;
+  NodeStatus status = 3;
+  GeographicHint location_hint = 4; // Generalized for privacy
+}
+
+message NodeCapabilities {
+  repeated string supported_protocols = 1;
+  repeated string crypto_algorithms = 2;
+  int32 max_connections = 3;
+  int32 max_bandwidth_kbps = 4;
+  bool supports_routing = 5;
+  bool supports_storage = 6;
+}
+
+message NodeStatus {
+  bool is_online = 1;
+  int64 last_seen = 2;
+  float trust_score = 3;
+  int32 uptime_seconds = 4;
+}
+
+message GeographicHint {
+  string continent = 1;  // "EUROPE", "ASIA", etc.
+  string timezone = 2;   // "+01:00", etc.
+  // Note: No precise location for privacy
+}
+
+message MeshEdge {
+  string source_node = 1;
+  string destination_node = 2;
+  EdgeProperties properties = 3;
+}
+
+message EdgeProperties {
+  int32 latency_ms = 1;
+  float reliability = 2;
+  int32 bandwidth_kbps = 3;
+  float packet_loss_rate = 4;
+  bool is_direct_connection = 5;
+}
+
+// WRAITH TUNNEL specific payload
+message WraithTunnelPayload {
+  // Zero-knowledge proof data
+  ZKProofData zk_proof = 1;
+  
+  // Tunnel circuit information
+  TunnelCircuit circuit = 2;
+  
+  // Onion-routed data
+  OnionLayer onion_layer = 3;
+  
+  // Deniable authentication
+  DeniableAuth deniable_auth = 4;
+}
+
+message ZKProofData {
+  bytes proof = 1;
+  bytes public_inputs = 2;
+  string proof_system = 3; // "GROTH16", "PLONK", etc.
+  string circuit_id = 4;
+  int64 proof_timestamp = 5;
+}
+
+message TunnelCircuit {
+  string circuit_id = 1;
+  repeated TunnelHop hops = 2;
+  int32 circuit_length = 3;
+  int64 established_at = 4;
+  int64 expires_at = 5;
+}
+
+message TunnelHop {
+  string hop_id = 1; // Anonymous hop identifier
+  bytes encrypted_next_hop = 2;
+  int32 hop_index = 3;
+  bool is_exit_node = 4;
+}
+
+message OnionLayer {
+  bytes encrypted_payload = 1;
+  int32 layer_index = 2;
+  int32 total_layers = 3;
+  bytes layer_auth_tag = 4;
+}
+
+message DeniableAuth {
+  bytes deniable_signature = 1;
+  bytes fake_randomness = 2;
+  string deniability_scheme = 3; // "RING_SIGNATURE", "DESIGNATED_VERIFIER", etc.
+  int64 auth_timestamp = 4;
+}
+
+// Error handling
+message ProtocolError {
+  ErrorCode error_code = 1;
+  string error_message = 2;
+  string failing_component = 3;
+  int64 error_timestamp = 4;
+  bytes debug_info = 5;
+  
+  enum ErrorCode {
+    ERROR_UNKNOWN = 0;
+    ERROR_MATERIALIZATION_FAILED = 1;
+    ERROR_VANISHING_FAILED = 2;
+    ERROR_CRYPTO_FAILURE = 3;
+    ERROR_NETWORK_TIMEOUT = 4;
+    ERROR_INSUFFICIENT_RESOURCES = 5;
+    ERROR_PROTOCOL_VIOLATION = 6;
+    ERROR_AUTHENTICATION_FAILURE = 7;
+    ERROR_QUANTUM_RESISTANCE_BREACH = 8;
+  }
+}

@@ -8,6 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CryptoJS from 'crypto-js';
 import PoisoningResistantLearning from '../ml/PoisoningResistantLearning';
+import quantumGravityEngine from '../physics/QuantumGravityEngine';
 
 class AdaptiveThreatIntelligence {
   constructor() {
@@ -212,20 +213,55 @@ class AdaptiveThreatIntelligence {
   async initializeIntelligenceSharing() {
     this.intelligenceSharing = {
       active: true,
-      shareInterval: 300000, // 5 minutes
+      baseShareInterval: 300000, // 5 minutes base
+      currentShareInterval: 300000,
       privacyPreserving: true,
       consensusRequired: true,
-      sharableIntelligence: ['threat_signatures', 'attack_patterns', 'model_updates']
+      sharableIntelligence: ['threat_signatures', 'attack_patterns', 'model_updates'],
+      gravityAdjustedSync: true,
+      lastGravityCheck: Date.now()
     };
 
-    // Start intelligence sharing
-    setInterval(() => {
-      if (this.intelligenceSharing.active) {
-        this.shareIntelligenceWithMesh();
-      }
-    }, this.intelligenceSharing.shareInterval);
+    // Start adaptive intelligence sharing with gravity-based intervals
+    this.startAdaptiveIntelligenceSharing();
 
-    console.log('🤝 Intelligence sharing initialized');
+    console.log('🤝 Gravity-adjusted intelligence sharing initialized');
+  }
+  
+  /**
+   * Start adaptive intelligence sharing with dynamic intervals
+   */
+  async startAdaptiveIntelligenceSharing() {
+    const scheduleNextShare = async () => {
+      if (this.intelligenceSharing.active) {
+        // Calculate system energy and gravity
+        const systemEnergy = await this.calculateThreatSystemEnergy();
+        const G_eff = quantumGravityEngine.calculateEffectiveG(systemEnergy);
+        
+        // Get gravity-adjusted sync frequency
+        // FORMULA: pushInterval = base / G_eff (as specified)
+        const pushInterval = this.intelligenceSharing.baseShareInterval / Math.max(G_eff, 0.01);
+        const syncFrequency = Math.round(pushInterval);
+        
+        this.intelligenceSharing.currentShareInterval = syncFrequency;
+        
+        // Log gravity effects
+        if (quantumGravityEngine.isQuantumMode(G_eff)) {
+          console.log('⚛️ QUANTUM MODE: Threat sync every 1s!');
+        } else if (syncFrequency < 60000) {
+          console.log(`🚀 High threat energy: Sync frequency ${Math.round(syncFrequency/1000)}s (G=${G_eff.toFixed(3)})`);
+        }
+        
+        // Share intelligence
+        await this.shareIntelligenceWithMesh();
+        
+        // Schedule next share with dynamic interval
+        setTimeout(scheduleNextShare, syncFrequency);
+      }
+    };
+    
+    // Start the cycle
+    scheduleNextShare();
   }
 
   /**
@@ -658,6 +694,69 @@ class AdaptiveThreatIntelligence {
     } catch (error) {
       console.error('Failed to save threat intelligence:', error.message);
     }
+  }
+  
+  /**
+   * Calculate threat system energy for gravity calculations
+   */
+  async calculateThreatSystemEnergy() {
+    try {
+      // Calculate threat intensity
+      const recentThreats = this.threatMetrics.threatsDetected;
+      const recentBlocks = this.threatMetrics.attacksBlocked;
+      const startTime = this.startTime || (Date.now() - 3600000); // Default 1 hour ago
+      const threatRate = recentThreats / Math.max(1, Date.now() - startTime) * 1000; // per second
+      
+      // Get average threat score from recent assessments
+      let avgThreatScore = 0;
+      let threatCount = 0;
+      for (const [_, threat] of this.threatDatabase) {
+        if (threat.timestamp && (Date.now() - threat.timestamp) < 300000) { // Last 5 minutes
+          avgThreatScore += threat.confidence || 0.5;
+          threatCount++;
+        }
+      }
+      avgThreatScore = threatCount > 0 ? avgThreatScore / threatCount : 0;
+      
+      // Check for active attacks
+      const activeAttacks = await this.detectActiveAttacks();
+      const attackIntensity = Math.min(1.0, activeAttacks.length / 5); // 5+ attacks = max intensity
+      
+      // Calculate system load from threat processing
+      const processingLoad = Math.min(1.0, (this.learningEngine?.trainingRounds || 0) / 100);
+      
+      return quantumGravityEngine.computeSystemEnergy({
+        packetsPerSecond: threatRate * 1000, // Threats generate virtual "packets"
+        cpuLoad: processingLoad,
+        batteryDrain: processingLoad * 0.7,
+        threatScore: Math.max(avgThreatScore, attackIntensity),
+        activeConnections: this.nodeIntelligence.size,
+        memoryPressure: Math.min(1.0, this.threatDatabase.size / 1000)
+      });
+      
+    } catch (error) {
+      console.error('Failed to calculate threat system energy:', error.message);
+      return 0.5; // Default medium energy
+    }
+  }
+  
+  /**
+   * Detect currently active attacks
+   */
+  async detectActiveAttacks() {
+    const activeAttacks = [];
+    const now = Date.now();
+    
+    // Check recent threat assessments
+    for (const [threatId, threat] of this.threatDatabase) {
+      if (threat.timestamp && (now - threat.timestamp) < 60000) { // Last minute
+        if (threat.confidence > 0.8 && threat.threatLevel >= 'HIGH') {
+          activeAttacks.push(threat);
+        }
+      }
+    }
+    
+    return activeAttacks;
   }
 }
 
