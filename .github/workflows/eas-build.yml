@@ -23,44 +23,40 @@ jobs:
     - name: Install dependencies
       run: npm ci --legacy-peer-deps --prefer-offline --no-audit --progress=false
       
-    - name: Setup Expo CLI
-      run: npm install -g @expo/cli eas-cli
-      
-    - name: Create app.json for EAS
-      run: |
-        cat > app.json << 'EOF'
-        {
-          "expo": {
-            "name": "GhostBridge",
-            "slug": "ghostbridge-app",
-            "version": "1.0.0",
-            "platforms": ["android"],
-            "android": {
-              "package": "com.ghostbridgeapp",
-              "versionCode": 1,
-              "compileSdkVersion": 35,
-              "targetSdkVersion": 35,
-              "buildToolsVersion": "35.0.0"
-            },
-            "plugins": [
-              [
-                "expo-build-properties",
-                {
-                  "android": {
-                    "compileSdkVersion": 35,
-                    "targetSdkVersion": 35,
-                    "buildToolsVersion": "35.0.0"
-                  }
-                }
-              ]
-            ]
-          }
-        }
-        EOF
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
         
-    - name: Upload APK artifact
+    - name: Setup Android SDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y android-sdk
+        
+    - name: Make Gradlew executable
+      run: chmod +x android/gradlew
+      
+    - name: Build Debug APK
+      run: |
+        cd android
+        ./gradlew assembleDebug --no-daemon
+        
+    - name: Build Release APK
+      run: |
+        cd android
+        ./gradlew assembleRelease --no-daemon
+        
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
-        name: ghostbridge-apk
-        path: "*.apk"
+        name: ghostbridge-debug-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+        
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: ghostbridge-release-apk
+        path: android/app/build/outputs/apk/release/app-release.apk
         retention-days: 30
