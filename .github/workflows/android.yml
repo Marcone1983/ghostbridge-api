@@ -40,7 +40,7 @@ jobs:
         
     - name: Install dependencies (with retry)
       run: |
-        npm ci --prefer-offline --no-audit --progress=false || npm install --prefer-offline --no-audit --progress=false
+        npm ci --legacy-peer-deps --prefer-offline --no-audit --progress=false || npm install --legacy-peer-deps --prefer-offline --no-audit --progress=false
         
     - name: Create Release Keystore
       run: |
