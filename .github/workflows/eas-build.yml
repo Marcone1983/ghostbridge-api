@@ -58,17 +58,9 @@ jobs:
         }
         EOF
         
-    - name: EAS Build APK
-      run: |
-        # Create fake Expo account token (EAS will use GitHub Actions context)
-        export EXPO_TOKEN="fake-token-for-github"
-        eas build --platform android --profile development --non-interactive --no-wait
-      env:
-        EAS_BUILD_AUTOSUBMIT: true
-        
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ghostbridge-eas-apk
+        name: ghostbridge-apk
         path: "*.apk"
         retention-days: 30
