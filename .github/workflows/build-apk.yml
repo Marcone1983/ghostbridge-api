@@ -57,12 +57,9 @@ jobs:
         
     - name: 🔧 Setup Node.js shims without problematic packages
       run: |
-        # Esegui rn-nodeify senza react-native-os
-        npx rn-nodeify --install --hack
-        # Rimuovi react-native-os che causa problemi
-        rm -rf node_modules/react-native-os || true
-        # Rimuovi riferimenti da settings.gradle
-        sed -i '/react-native-os/d' android/settings.gradle || true
+        # Non eseguire rn-nodeify che causa problemi con react-native-os
+        # Invece copia solo il file shim necessario
+        cp shim.js ./
         
     - name: 🧹 Clean Build
       run: |
