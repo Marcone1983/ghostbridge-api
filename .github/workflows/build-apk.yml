@@ -50,16 +50,19 @@ jobs:
       run: |
         echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
         
-    - name: 🔧 Patch react-native-os Gradle
-      run: |
-        # Patch react-native-os to use implementation instead of compile
-        find node_modules -name "build.gradle" -path "*/react-native-os/*" -exec sed -i 's/compile(/implementation(/g' {} \;
-        
     - name: 📦 Install Dependencies
       run: |
         npm ci --legacy-peer-deps
         npm install --legacy-peer-deps
-        npx --legacy-peer-deps rn-nodeify --install --hack
+        
+    - name: 🔧 Setup Node.js shims without problematic packages
+      run: |
+        # Esegui rn-nodeify senza react-native-os
+        npx rn-nodeify --install --hack
+        # Rimuovi react-native-os che causa problemi
+        rm -rf node_modules/react-native-os || true
+        # Rimuovi riferimenti da settings.gradle
+        sed -i '/react-native-os/d' android/settings.gradle || true
         
     - name: 🧹 Clean Build
       run: |
