@@ -50,6 +50,11 @@ jobs:
       run: |
         echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
         
+    - name: 🔧 Patch react-native-os Gradle
+      run: |
+        # Patch react-native-os to use implementation instead of compile
+        find node_modules -name "build.gradle" -path "*/react-native-os/*" -exec sed -i 's/compile(/implementation(/g' {} \;
+        
     - name: 📦 Install Dependencies
       run: |
         npm ci --legacy-peer-deps
