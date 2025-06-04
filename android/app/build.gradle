@@ -91,6 +91,9 @@ android {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
         }
         
+        // Risolve conflitto react-native-camera
+        missingDimensionStrategy 'react-native-camera', 'general'
+        
         externalNativeBuild {
             cmake {
                 cppFlags '-std=c++14'

@@ -39,14 +39,16 @@ jobs:
         
     - name: 🤖 Setup Android SDK
       uses: android-actions/setup-android@v3
-      with:
-        api-level: 34
-        build-tools: 34.0.0
         
-    - name: 🛠️ Setup Android NDK
+    - name: 🛠️ Setup Android SDK Components
       run: |
+        echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> $GITHUB_ENV
-        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "ndk;25.1.8937393"
+        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
+        
+    - name: 📝 Create local.properties
+      run: |
+        echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
         
     - name: 📦 Install Dependencies
       run: |
