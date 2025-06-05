@@ -20,14 +20,20 @@ import io.invertase.firebase.app.ReactNativeFirebaseAppPackage;
 import io.invertase.firebase.auth.ReactNativeFirebaseAuthPackage;
 // @react-native-firebase/database
 import io.invertase.firebase.database.ReactNativeFirebaseDatabasePackage;
+// @react-native-firebase/messaging
+import io.invertase.firebase.messaging.ReactNativeFirebaseMessagingPackage;
 // jail-monkey
 import com.gantix.JailMonkey.JailMonkeyPackage;
 // react-native-aes-crypto
 import com.tectiv3.aes.AesPackage;
+// react-native-audio-recorder-player
+import com.dooboolab.audiorecorderplayer.RNAudioRecorderPlayerPackage;
 // react-native-background-timer
 import com.ocetnik.timer.BackgroundTimerPackage;
 // react-native-biometrics
 import com.rnbiometrics.ReactNativeBiometricsPackage;
+// react-native-camera
+import org.reactnative.camera.RNCameraPackage;
 // react-native-device-info
 import com.learnium.RNDeviceInfo.RNDeviceInfo;
 // react-native-fs
@@ -36,6 +42,8 @@ import com.rnfs.RNFSPackage;
 import com.swmansion.gesturehandler.RNGestureHandlerPackage;
 // react-native-get-random-values
 import org.linusu.RNGetRandomValuesPackage;
+// react-native-image-picker
+import com.imagepicker.ImagePickerPackage;
 // react-native-keychain
 import com.oblador.keychain.KeychainPackage;
 // react-native-linear-gradient
@@ -52,12 +60,16 @@ import com.RNRSA.RNRSAPackage;
 import com.th3rdwave.safeareacontext.SafeAreaContextPackage;
 // react-native-screens
 import com.swmansion.rnscreens.RNScreensPackage;
+// react-native-sound-player
+import com.johnsonsu.rnsoundplayer.RNSoundPlayerPackage;
 // react-native-tcp-socket
 import com.asterinet.react.tcpsocket.TcpSocketPackage;
 // react-native-udp
 import com.tradle.react.UdpSocketsModule;
 // react-native-vector-icons
 import com.oblador.vectoricons.VectorIconsPackage;
+// react-native-webrtc
+import com.oney.WebRTCModule.WebRTCModulePackage;
 
 public class PackageList {
   private Application application;
@@ -108,14 +120,18 @@ public class PackageList {
       new ReactNativeFirebaseAppPackage(),
       new ReactNativeFirebaseAuthPackage(),
       new ReactNativeFirebaseDatabasePackage(),
+      new ReactNativeFirebaseMessagingPackage(),
       new JailMonkeyPackage(),
       new AesPackage(),
+      new RNAudioRecorderPlayerPackage(),
       new BackgroundTimerPackage(),
       new ReactNativeBiometricsPackage(),
+      new RNCameraPackage(),
       new RNDeviceInfo(),
       new RNFSPackage(),
       new RNGestureHandlerPackage(),
       new RNGetRandomValuesPackage(),
+      new ImagePickerPackage(),
       new KeychainPackage(),
       new LinearGradientPackage(),
       new RNPermissionsPackage(),
@@ -124,9 +140,11 @@ public class PackageList {
       new RNRSAPackage(),
       new SafeAreaContextPackage(),
       new RNScreensPackage(),
+      new RNSoundPlayerPackage(),
       new TcpSocketPackage(),
       new UdpSocketsModule(),
-      new VectorIconsPackage()
+      new VectorIconsPackage(),
+      new WebRTCModulePackage()
     ));
   }
 }
